@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudguard-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=CloudGuard AI Enterprise Platform
+      - DATABASE_URL=sqlite:///./cloudguard.db
+      - JWT_SECRET_KEY=cloudguard-prod-hackathon-2026-secret-key-32b
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cloudguard-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
