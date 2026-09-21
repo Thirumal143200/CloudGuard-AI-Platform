@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     # --- Database ---
     DATABASE_URL: str = "sqlite:///./cloudguard.db"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def fix_postgres_scheme(cls, v: str) -> str:
+        if isinstance(v, str) and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+
     # --- Authentication & JWT ---
     JWT_SECRET: Optional[str] = None
     JWT_SECRET_KEY: str = Field(default=DEFAULT_PLACEHOLDER_SECRET)
