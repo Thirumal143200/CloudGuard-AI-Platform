@@ -7,14 +7,14 @@
 
 ## 1. Active Deployment Tracking
 
-| Component | URL / Endpoint | Target Architecture | Status | Last Verified |
-|---|---|---|---|---|
-| **Frontend Web App** | `http://localhost:5173` | React 18 + Vite (SPA) | `WORKING` | 2026-09-22 |
-| **Backend API Gateway** | `http://localhost:8000` | FastAPI / Python 3.11 | `WORKING` | 2026-09-22 |
-| **Interactive API Docs** | `http://localhost:8000/docs` | OpenAPI 3.1 / Swagger UI | `WORKING` | 2026-09-22 |
-| **Liveness Probe** | `http://localhost:8000/health/live` | HTTP GET (`live: true`) | `WORKING` | 2026-09-22 |
-| **Readiness Probe** | `http://localhost:8000/health/ready` | DB Connectivity (`SELECT 1`) | `WORKING` | 2026-09-22 |
-| **System Status Matrix** | `http://localhost:8000/api/system/status` | Sanitized System Matrix | `WORKING` | 2026-09-22 |
+| Component | URL | Commit | Status | Last Verified |
+| :--- | :--- | :---: | :---: | :--- |
+| **Frontend** | `http://localhost:5173` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
+| **Backend** | `http://localhost:8000` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
+| **Swagger** | `http://localhost:8000/docs` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
+| **Liveness Probe** | `http://localhost:8000/health/live` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
+| **Readiness Probe** | `http://localhost:8000/health/ready` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
+| **System Status** | `http://localhost:8000/api/system/status` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
 
 *Note: In production cloud deployment, replace `localhost` with the verified production domain (e.g. `https://cloudguard.ai`) only after successful DNS resolution and SSL termination.*
 
