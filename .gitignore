@@ -1,0 +1,72 @@
+# =====================================================================
+# CloudGuard AI Platform — .gitignore
+# Strictly prevents commiting secrets, credentials, databases, and builds
+# =====================================================================
+
+# Environment Files & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+
+# Private Keys & Certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+id_rsa
+id_rsa.pub
+
+# Cloud Credential Files & Service Accounts
+*credentials*.json
+*service-account*.json
+*sa-key*.json
+google-credentials*.json
+gcp-key*.json
+aws-credentials*
+
+# Databases & Backups
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.dump
+*.sql.gz
+backend/data/
+
+# Python & Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node.js & Frontend Build
+node_modules/
+frontend/dist/
+frontend/build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# System & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
