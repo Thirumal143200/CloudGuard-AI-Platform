@@ -35,7 +35,10 @@ async def lifespan(app: FastAPI):
     settings.validate_for_runtime()
 
     # 2. Initialize database schema
-    Base.metadata.create_all(bind=engine)
+    # In development/demo/test environments, create_all provides quick boot.
+    # In production environments, Alembic migrations ('alembic upgrade head') are required.
+    if settings.ENVIRONMENT.lower() != "production":
+        Base.metadata.create_all(bind=engine)
 
     # 3. Mode-specific initialization
     db = SessionLocal()

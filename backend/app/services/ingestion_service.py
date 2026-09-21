@@ -119,7 +119,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
                         "statements": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
                     }
                 ],
-                "access_keys": [{"key_id": "AKIAIOSFODNN7EXAMPLE", "age_days": 182, "status": "Active"}]
+                "access_keys": [{"key_id": "DEMO_IAM_KEY_UNROTATED_01", "age_days": 182, "status": "Active"}]
             },
             "tags": {"Team": "Platform", "Role": "CI/CD"},
             "risk_score": 90.0

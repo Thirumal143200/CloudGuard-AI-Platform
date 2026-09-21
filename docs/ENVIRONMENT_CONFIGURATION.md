@@ -10,23 +10,21 @@
 
 The following table documents all core runtime environment variables required by the CloudGuard AI Platform:
 
-| Variable | Purpose | Required | Example / Format | Secret |
-|:---|:---|:---:|:---|:---:|
-| `DATABASE_URL` | Primary relational database connection string | Yes | `postgresql://cg_user:p4ss@db.internal:5432/cloudguard` | **Yes** |
-| `JWT_SECRET_KEY` | Symmetric key used to sign access JWTs | Yes | 64-character hex string (`openssl rand -hex 32`) | **Yes** |
-| `JWT_REFRESH_SECRET_KEY` | Symmetric key used to sign refresh JWTs | Yes | 64-character hex string (`openssl rand -hex 32`) | **Yes** |
-| `JWT_ALGORITHM` | Cryptographic algorithm for JWT signatures | No (default `HS256`) | `HS256` or `RS256` | No |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifespan | No (default `60`) | `60` (minutes) | No |
-| `GEMINI_API_KEY` | Google Gemini API access key | Optional (AI mode) | `AIzaSy...` (from Google AI Studio) | **Yes** |
-| `GEMINI_MODEL` | Gemini GenAI model identifier | Yes | `gemini-2.5-flash` or `gemini-2.0-flash` | No |
-| `GEMINI_TIMEOUT_SECONDS` | Maximum timeout for GenAI inference | No (default `15`) | `15` | No |
-| `ENCRYPTION_KEY` | AES-256-GCM symmetric master key for field encryption | Yes | 64-character hex string (32 raw bytes) | **Yes** |
-| `CORS_ORIGIN` | Allowed web origin for API requests | Yes | `https://cloudguard.ai,https://app.cloudguard.ai` | No |
-| `VITE_API_URL` | Frontend URL targeting backend API root | Yes | `https://api.cloudguard.ai` (Prod) or `/api/v1` (Dev) | No |
-| `PORT` | Backend HTTP service listening port | Yes (default `8000`) | `8000` | No |
-| `HOST` | Backend HTTP service listening address | No (default `0.0.0.0`) | `0.0.0.0` or `127.0.0.1` | No |
-| `ENVIRONMENT` | Runtime deployment environment | Yes | `development`, `staging`, `production` | No |
-| `DEPLOYMENT_MODE` | Operating mode for telemetry & findings | Yes | `PRODUCTION`, `DEMO`, `NO_DATA` | No |
+| Variable | Purpose | Required | Example/Format | Secret |
+| :--- | :--- | :---: | :--- | :---: |
+| `DATABASE_URL` | Database connection | Yes | PostgreSQL URL | Yes |
+| `JWT_SECRET` | JWT signing (alias: `JWT_SECRET_KEY`) | Yes | Random secret (64-char hex) | Yes |
+| `JWT_REFRESH_SECRET` | Refresh token signing (alias: `JWT_REFRESH_SECRET_KEY`) | Yes | Random secret (64-char hex) | Yes |
+| `GEMINI_API_KEY` | Gemini API | AI mode | Provider key (`AIzaSy...`) | Yes |
+| `GEMINI_MODEL` | Gemini model | Yes | Configurable model name (`gemini-2.5-flash`) | No |
+| `ENCRYPTION_KEY` | AES-256-GCM master key | Yes | 32-byte key (64 hex characters) | Yes |
+| `CORS_ORIGIN` | Allowed frontend origin | Yes | Production URL (`https://app.cloudguard.ai`) | No |
+| `VITE_API_URL` | Backend API URL | Yes | Backend URL (`https://api.cloudguard.ai`) | No |
+| `PORT` | Backend port | Yes | `8000` | No |
+| `ENVIRONMENT` | Runtime environment | Yes | `development`/`staging`/`production` | No |
+| `DEPLOYMENT_MODE` | Runtime operational mode | Yes | `PRODUCTION`/`DEMO`/`NO_DATA` | No |
+| `HOST` | Backend host binding address | No | `0.0.0.0` or `127.0.0.1` | No |
+| `GEMINI_TIMEOUT_SECONDS` | Gemini request timeout | No | `15` | No |
 
 ---
 

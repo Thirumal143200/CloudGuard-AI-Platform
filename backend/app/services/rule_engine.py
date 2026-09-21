@@ -62,7 +62,7 @@ def _eval_aws_iam_unrotated_keys(config: Dict[str, Any]) -> Optional[Dict[str, A
         if age_days > 90 and key.get("status") == "Active":
             return {
                 "title": f"IAM Access Key Active For {age_days} Days (>90 Days)",
-                "summary": f"Access key {key.get('key_id', 'AKIA...')} has not been rotated for {age_days} days.",
+                "summary": f"Access key {key.get('key_id', 'KEY_ID')} has not been rotated for {age_days} days.",
                 "evidence": {"key_id": key.get("key_id"), "age_days": age_days, "status": "Active"},
                 "risk_weight": 70.0
             }

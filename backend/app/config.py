@@ -3,7 +3,7 @@ import os
 import re
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 DEFAULT_PLACEHOLDER_SECRET = "replace-with-a-secure-random-32-byte-hex-secret-in-production"
@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./cloudguard.db"
 
     # --- Authentication & JWT ---
+    JWT_SECRET: Optional[str] = None
     JWT_SECRET_KEY: str = Field(default=DEFAULT_PLACEHOLDER_SECRET)
+    JWT_REFRESH_SECRET: Optional[str] = None
     JWT_REFRESH_SECRET_KEY: str = Field(default=DEFAULT_PLACEHOLDER_REFRESH)
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
@@ -35,8 +37,17 @@ class Settings(BaseSettings):
     # --- Master AES-256-GCM Key ---
     ENCRYPTION_KEY: str = Field(default="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 
-    # --- CORS Allowed Origins ---
+    # --- CORS Allowed Origins & Frontend API ---
     CORS_ORIGIN: str = "http://localhost:5173,http://localhost:3000"
+    VITE_API_URL: Optional[str] = "http://localhost:8000"
+
+    @model_validator(mode="after")
+    def populate_aliases(self) -> "Settings":
+        if self.JWT_SECRET and self.JWT_SECRET_KEY == DEFAULT_PLACEHOLDER_SECRET:
+            self.JWT_SECRET_KEY = self.JWT_SECRET
+        if self.JWT_REFRESH_SECRET and self.JWT_REFRESH_SECRET_KEY == DEFAULT_PLACEHOLDER_REFRESH:
+            self.JWT_REFRESH_SECRET_KEY = self.JWT_REFRESH_SECRET
+        return self
 
     # --- Google Gemini GenAI ---
     GEMINI_API_KEY: Optional[str] = None
