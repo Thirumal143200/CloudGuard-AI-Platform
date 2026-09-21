@@ -9,12 +9,13 @@
 
 | Component | URL | Commit | Status | Last Verified |
 | :--- | :--- | :---: | :---: | :--- |
-| **Frontend** | `http://localhost:5173` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
-| **Backend** | `http://localhost:8000` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
-| **Swagger** | `http://localhost:8000/docs` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
-| **Liveness Probe** | `http://localhost:8000/health/live` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
-| **Readiness Probe** | `http://localhost:8000/health/ready` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
-| **System Status** | `http://localhost:8000/api/system/status` | `ec20e27` | `WORKING` | 2026-09-22T00:43:00Z |
+| **GitHub Repository** | `https://github.com/Thirumal143200/CloudGuard-AI-Platform` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
+| **Frontend** | `http://localhost:5173` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
+| **Backend** | `http://localhost:8000` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
+| **Swagger** | `http://localhost:8000/docs` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
+| **Liveness Probe** | `http://localhost:8000/health/live` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
+| **Readiness Probe** | `http://localhost:8000/health/ready` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
+| **System Status** | `http://localhost:8000/api/system/status` | `fcfdc9e` | `WORKING` | 2026-09-22T01:13:00Z |
 
 *Note: In production cloud deployment, replace `localhost` with the verified production domain (e.g. `https://cloudguard.ai`) only after successful DNS resolution and SSL termination.*
 
