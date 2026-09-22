@@ -82,7 +82,7 @@ const SAMPLES = {
   csv: {
     filename: 'aws_security_export.csv',
     format: 'CSV (Asset Inventory Export)',
-    content: `name,native_id,resource_type,provider,region,encryption_enabled,public_access,mfa_delete,risk_notes\nprod-patient-records-s3,arn:aws:s3:::prod-patient-records-s3,AWS::S3::Bucket,AWS,us-east-1,false,true,false,Unencrypted bucket containing simulated medical telemetry\nsg-kubernetes-master,sg-0a8b9c1d2e3f4g5,AWS::EC2::SecurityGroup,AWS,us-east-1,false,true,false,Kubernetes API server security group with 0.0.0.0/0 ingress\niam-deployer-admin-keys,AKIAIOSFODNN7EXAMPLE,AWS::IAM::User,AWS,global,false,true,false,Simulated root access keys older than 90 days with AdministratorAccess`
+    content: `# DEMO DATASET - SIMULATED CLOUD INVENTORY - NEVER REAL CREDENTIAL\nname,native_id,resource_type,provider,region,encryption_enabled,public_access,mfa_delete,data_nature,risk_notes\nprod-patient-records-s3,arn:aws:s3:::prod-patient-records-s3,AWS::S3::Bucket,AWS,us-east-1,false,true,false,SIMULATED_DEMO_DATASET,Unencrypted bucket containing simulated medical telemetry\nsg-kubernetes-master,sg-0a8b9c1d2e3f4g5,AWS::EC2::SecurityGroup,AWS,us-east-1,false,true,false,SIMULATED_DEMO_DATASET,Kubernetes API server security group with 0.0.0.0/0 ingress\niam-deployer-admin-keys,DEMO-AWS-ACCESS-KEY-NOT-A-REAL-CREDENTIAL,AWS::IAM::User,AWS,global,false,true,false,SIMULATED_DEMO_DATASET_NEVER_REAL_CREDENTIAL,Simulated root access keys older than 90 days with AdministratorAccess`
   },
   tf: {
     filename: 'terraform_security_example.tf',

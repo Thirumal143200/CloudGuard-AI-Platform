@@ -1,4 +1,4 @@
-﻿"""CloudGuard AI - Comprehensive Backend Unit, Integration & Multi-Tenant Security Tests
+"""CloudGuard AI - Comprehensive Backend Unit, Integration & Multi-Tenant Security Tests
 
 Validates:
 1. Health and readiness container probes
@@ -235,6 +235,29 @@ def test_file_upload_csv(client, test_analyst_token):
     data = resp.json()
     assert data["status"] == "COMPLETED"
     assert data["assets_discovered"] == 1
+
+
+def test_file_upload_demo_csv_fixture(client, test_analyst_token):
+    """Verify that the official UI demo CSV fixture uploads and evaluates findings successfully."""
+    headers = test_analyst_token["headers"]
+    demo_csv = (
+        "# DEMO DATASET - SIMULATED CLOUD INVENTORY - NEVER REAL CREDENTIAL\n"
+        "name,native_id,resource_type,provider,region,encryption_enabled,public_access,mfa_delete,data_nature,risk_notes\n"
+        "prod-patient-records-s3,arn:aws:s3:::prod-patient-records-s3,AWS::S3::Bucket,AWS,us-east-1,false,true,false,SIMULATED_DEMO_DATASET,Unencrypted bucket containing simulated medical telemetry\n"
+        "sg-kubernetes-master,sg-0a8b9c1d2e3f4g5,AWS::EC2::SecurityGroup,AWS,us-east-1,false,true,false,SIMULATED_DEMO_DATASET,Kubernetes API server security group with 0.0.0.0/0 ingress\n"
+        "iam-deployer-admin-keys,DEMO-AWS-ACCESS-KEY-NOT-A-REAL-CREDENTIAL,AWS::IAM::User,AWS,global,false,true,false,SIMULATED_DEMO_DATASET_NEVER_REAL_CREDENTIAL,Simulated root access keys older than 90 days with AdministratorAccess\n"
+    ).encode("utf-8")
+
+    resp = client.post(
+        "/api/v1/cloud/upload-file",
+        files={"file": ("aws_security_export.csv", io.BytesIO(demo_csv), "text/csv")},
+        headers=headers
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "COMPLETED"
+    assert data["assets_discovered"] == 3
+    assert len(data["findings"]) >= 2
 
 
 def test_file_upload_terraform(client, test_analyst_token):

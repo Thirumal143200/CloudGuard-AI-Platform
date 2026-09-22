@@ -35,8 +35,8 @@ CloudGuard AI connects to major hyperscalers using read-only, least-privilege cr
 ### A. Amazon Web Services (AWS)
 | Variable | Purpose | Required | Example / Format | Secret |
 |:---|:---|:---:|:---|:---:|
-| `AWS_ACCESS_KEY_ID` | IAM identity access key | Optional | `AKIAIOSFODNN7EXAMPLE` | **Yes** |
-| `AWS_SECRET_ACCESS_KEY` | IAM identity secret access key | Optional | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` | **Yes** |
+| `AWS_ACCESS_KEY_ID` | IAM identity access key | Optional | `AKIA_SAMPLE_KEY_NOT_REAL` | **Yes** |
+| `AWS_SECRET_ACCESS_KEY` | IAM identity secret access key | Optional | `wJalrXUtnFEMI_SAMPLE_SECRET_NOT_REAL` | **Yes** |
 | `AWS_DEFAULT_REGION` | Default AWS region to scan | Optional | `us-east-1` | No |
 | `AWS_ROLE_ARN` | Cross-account SecurityAudit role to assume | Optional | `arn:aws:iam::123456789012:role/CloudGuardAudit` | No |
 

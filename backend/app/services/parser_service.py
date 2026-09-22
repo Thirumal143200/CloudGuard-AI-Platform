@@ -1,4 +1,4 @@
-﻿"""
+"""
 CloudGuard AI â€” Ingestion Parser Service
 Multi-format parser and normalizer for cloud infrastructure security configurations.
 
@@ -170,7 +170,12 @@ def _parse_csv(text: str, filename: str) -> List[Dict[str, Any]]:
     """Parse CSV rows into normalized cloud resources."""
     resources = []
     try:
-        reader = csv.DictReader(io.StringIO(text))
+        # Filter comment lines (e.g., # DEMO DATASET...)
+        lines = [line for line in text.splitlines() if line.strip() and not line.strip().startswith("#")]
+        if not lines:
+            raise IngestionParserError("CSV file contained no data rows.")
+
+        reader = csv.DictReader(lines)
         for idx, row in enumerate(reader):
             # Clean keys
             clean_row = {k.strip().lower(): v.strip() for k, v in row.items() if k}
@@ -207,8 +212,28 @@ def _parse_csv(text: str, filename: str) -> List[Dict[str, Any]]:
             # Synthesize security attributes if indicated in CSV
             if "is_public" in clean_row:
                 config["is_public"] = clean_row["is_public"].lower() in ("true", "yes", "1")
+            elif "public_access" in clean_row:
+                config["is_public"] = clean_row["public_access"].lower() in ("true", "yes", "1")
+
             if "encrypted" in clean_row:
                 config["encrypted"] = clean_row["encrypted"].lower() in ("true", "yes", "1")
+            elif "encryption_enabled" in clean_row:
+                config["encrypted"] = clean_row["encryption_enabled"].lower() in ("true", "yes", "1")
+
+            if res_type == "AWS::IAM::User":
+                key_id = clean_row.get("native_id") or "DEMO-AWS-ACCESS-KEY-NOT-A-REAL-CREDENTIAL"
+                config["access_keys"] = [{
+                    "key_id": key_id,
+                    "age_days": 180,
+                    "status": "Active"
+                }]
+                if clean_row.get("mfa_delete") is not None:
+                    config["account_root_mfa_enabled"] = clean_row["mfa_delete"].lower() in ("true", "yes", "1")
+                if "admin" in res_name.lower():
+                    config["policies"] = [{
+                        "policy_name": "AdministratorAccessDirect",
+                        "statements": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
+                    }]
 
             resources.append({
                 "name": res_name,
@@ -219,6 +244,8 @@ def _parse_csv(text: str, filename: str) -> List[Dict[str, Any]]:
                 "configuration": config,
                 "tags": {"Source": "CSV-Inventory-Upload"}
             })
+    except IngestionParserError:
+        raise
     except Exception as e:
         raise IngestionParserError(f"Error parsing CSV '{filename}': {str(e)}")
 

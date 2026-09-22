@@ -42,7 +42,7 @@ jobs:
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         run: |
           cd backend
-          pytest -v tests/test_api.py
+          pytest -v
 
   # Stage 6-8: Frontend Validation & Production Build
   frontend-ci:
@@ -91,8 +91,8 @@ jobs:
 
       - name: "Scan for Hardcoded Cloud API Keys"
         run: |
-          # Check for high-entropy AWS/GCP key patterns in committed code
-          if grep -rnE "AKIA[0-9A-Z]{16}" --exclude-dir={.git,tests,docs,venv,node_modules} . ; then
+          # Explicitly scan source files and fixtures while excluding only build/runtime artifacts
+          if grep -rnE "AKIA[0-9A-Z]{16}" --exclude-dir={.git,node_modules,venv,__pycache__} . ; then
             echo "CRITICAL: Potential AWS Access Key detected in repository! Aborting."
             exit 1
           fi
