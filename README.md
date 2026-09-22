@@ -62,6 +62,8 @@ CloudGuard AI operates with zero default or hardcoded credentials. Every user cr
 ## 📂 Documentation Suite Directory
 
 All engineering architecture documents are organized in `docs/`:
+- [`CLOUDGUARD_USER_OPERATIONS_GUIDE.md`](./docs/CLOUDGUARD_USER_OPERATIONS_GUIDE.md) — Comprehensive Enterprise SOC Operations & Evaluation Guide
+- [`PRODUCTION_VERIFICATION.md`](./docs/PRODUCTION_VERIFICATION.md) — Production Verification & Deployment Gate Checklist
 - [`PRD.md`](./docs/PRD.md) — Product Requirements Document
 - [`TRD.md`](./docs/TRD.md) — Technical Requirements Document
 - [`APP_FLOW.md`](./docs/APP_FLOW.md) — Application Flow & User Journeys

@@ -71,6 +71,4 @@ Thumbs.db
 *.swp
 *.swo
 
-# Local Operator Guides & Private Documentation (Strictly Local Only)
-docs/CLOUDGUARD_USER_OPERATIONS_GUIDE.md
 
