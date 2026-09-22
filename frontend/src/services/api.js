@@ -53,6 +53,21 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  forgotPassword: (email) => apiRequest('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  }),
+  verifyOTP: (email, otp) => apiRequest('/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp }),
+  }),
+  resetPassword: (reset_token, new_password) => apiRequest('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ reset_token, new_password }),
+  }),
+  logout: () => apiRequest('/auth/logout', {
+    method: 'POST',
+  }),
   getMe: () => apiRequest('/auth/me'),
 
   // Health & Operational Status (Non-sensitive)
@@ -139,6 +154,10 @@ export const api = {
 export const {
   login,
   register,
+  forgotPassword,
+  verifyOTP,
+  resetPassword,
+  logout,
   getMe,
   getSystemStatus,
   getHealth,

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 44" fill="none">
+  <defs>
+    <linearGradient id="logoMarkGrad" x1="2" y1="2" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="logoInnerGrad" x1="10" y1="10" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Mark (X: 4, Y: 4, Size: 36x36) -->
+  <g transform="translate(2, 4)">
+    <path d="M18 3L5 8.5V17C5 24.8 10.5 31.8 18 33.5C25.5 31.8 31 24.8 31 17V8.5L18 3Z" fill="url(#logoMarkGrad)" />
+    <path d="M13.5 21.5C12.1 21.5 11 20.4 11 19C11 17.7 12 16.6 13.3 16.5C13.8 14.5 15.6 13 17.8 13C20.3 13 22.3 14.8 22.6 17.2C23.9 17.4 25 18.5 25 19.8C25 21.3 23.8 22.5 22.3 22.5H13.5V21.5Z" fill="#eff6ff" fill-opacity="0.3" />
+    <path d="M18 10V14M18 22V26M11 18H14M22 18H25" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+    <circle cx="18" cy="18" r="4.5" fill="url(#logoInnerGrad)" />
+    <path d="M16 18L17.5 19.5L20.5 16.5" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <!-- Typography -->
+  <text x="48" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="700" fill="#0f172a" letter-spacing="-0.02em">CloudGuard</text>
+  <text x="148" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill="#2563eb" letter-spacing="-0.02em">AI</text>
+  <text x="48" y="37" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="8.5" font-weight="600" fill="#64748b" letter-spacing="0.08em">CLOUD SECURITY, BACKED BY EVIDENCE</text>
+</svg>

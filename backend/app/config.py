@@ -76,6 +76,15 @@ class Settings(BaseSettings):
     GCP_PROJECT_ID: Optional[str] = None
     GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
 
+    # --- Email & Notifications (SMTP / Resend) ---
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: str = "noreply@cloudguard.ai"
+    SMTP_TLS: bool = True
+    RESEND_API_KEY: Optional[str] = None
+
     # --- ML & Baseline Paths ---
     ML_MODEL_DIR: str = str(Path(__file__).parent.parent / "ml_models")
 
@@ -137,6 +146,10 @@ class Settings(BaseSettings):
                 "aws": "CONFIGURED" if self.AWS_ACCESS_KEY_ID else "NOT CONFIGURED",
                 "azure": "CONFIGURED" if self.AZURE_CLIENT_ID else "NOT CONFIGURED",
                 "gcp": "CONFIGURED" if self.GCP_PROJECT_ID else "NOT CONFIGURED",
+            },
+            "email_delivery": {
+                "status": "CONFIGURED" if (self.SMTP_HOST or self.RESEND_API_KEY) else "NOT CONFIGURED",
+                "provider": "SMTP" if self.SMTP_HOST else "RESEND" if self.RESEND_API_KEY else "NONE",
             },
         }
 

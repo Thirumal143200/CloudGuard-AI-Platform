@@ -14,6 +14,7 @@ Covers:
 """
 import io
 import json
+import uuid
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -302,4 +303,120 @@ def test_ingestion_jobs_history(client):
     assert resp.status_code == 200
     jobs = resp.json()
     assert isinstance(jobs, list)
+
+
+def test_user_signup_lifecycle(client):
+    """Verify registration, password complexity enforcement, and duplicate rejection."""
+    unique_email = f"analyst.{uuid.uuid4().hex[:6]}@cloudguard.ai"
+
+    # 1. Reject weak password (too short)
+    weak_payload = {
+        "email": unique_email,
+        "full_name": "New Analyst",
+        "password": "weak",
+        "role": "SECURITY_ANALYST"
+    }
+    r = client.post("/api/v1/auth/register", json=weak_payload)
+    assert r.status_code in [400, 422]
+
+    # 2. Reject password lacking complexity (8+ chars but no numbers/special)
+    no_num_payload = {
+        "email": unique_email,
+        "full_name": "New Analyst",
+        "password": "NoNumbersHereAtAll",
+        "role": "SECURITY_ANALYST"
+    }
+    r_complex = client.post("/api/v1/auth/register", json=no_num_payload)
+    assert r_complex.status_code == 400
+    assert "Password must contain at least one number" in r_complex.json()["detail"]
+
+    # 3. Successful registration with complex password
+    valid_payload = {
+        "email": unique_email,
+        "full_name": "New Analyst",
+        "password": "SecurePassword123!",
+        "role": "SECURITY_ANALYST"
+    }
+    r = client.post("/api/v1/auth/register", json=valid_payload)
+    assert r.status_code == 200
+    user_data = r.json()
+    assert user_data["email"] == unique_email
+    assert user_data["full_name"] == "New Analyst"
+
+    # 4. Duplicate email rejection
+    r_dup = client.post("/api/v1/auth/register", json=valid_payload)
+    assert r_dup.status_code == 400
+    assert "already exists" in r_dup.json()["detail"]
+
+
+def test_forgot_password_and_otp_flow(client):
+    """Verify forgot-password anti-enumeration, OTP generation, verification, and reset."""
+    from app.models.user import PasswordResetOTP, User
+    from app.services.auth_service import hash_otp
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        email = f"otp.user.{uuid.uuid4().hex[:6]}@cloudguard.ai"
+        # 1. Register test user
+        client.post("/api/v1/auth/register", json={
+            "email": email,
+            "full_name": "OTP Test User",
+            "password": "OriginalPassword123!",
+            "role": "SECURITY_ANALYST"
+        })
+
+        # 2. Request OTP (forgot-password)
+        r_fp = client.post("/api/v1/auth/forgot-password", json={"email": email})
+        assert r_fp.status_code == 200
+        assert "verification code has been sent" in r_fp.json()["message"]
+
+        # Retrieve created OTP from DB
+        otp_record = db.query(PasswordResetOTP).filter(
+            PasswordResetOTP.email == email,
+            PasswordResetOTP.is_used == False
+        ).first()
+        assert otp_record is not None
+        assert otp_record.attempts_count == 0
+
+        # 3. Test wrong OTP rejection & attempt counter
+        r_wrong = client.post("/api/v1/auth/verify-otp", json={"email": email, "otp": "000000"})
+        assert r_wrong.status_code == 400
+        assert "Invalid verification code" in r_wrong.json()["detail"]
+        db.refresh(otp_record)
+        assert otp_record.attempts_count == 1
+
+        # 4. Set a known OTP for deterministic test verification
+        test_otp = "849201"
+        otp_record.otp_hash = hash_otp(test_otp)
+        db.commit()
+
+        # 5. Verify correct OTP -> returns reset token
+        r_verify = client.post("/api/v1/auth/verify-otp", json={"email": email, "otp": test_otp})
+        assert r_verify.status_code == 200
+        verify_data = r_verify.json()
+        assert "reset_token" in verify_data
+        reset_token = verify_data["reset_token"]
+
+        # 6. Reset password using valid token
+        new_pw = "NewSecurePassword456@"
+        r_reset = client.post("/api/v1/auth/reset-password", json={
+            "reset_token": reset_token,
+            "new_password": new_pw
+        })
+        assert r_reset.status_code == 200
+        assert "password has been reset successfully" in r_reset.json()["message"]
+
+        # 7. Login with old password must fail
+        r_old_login = client.post("/api/v1/auth/login", json={"email": email, "password": "OriginalPassword123!"})
+        assert r_old_login.status_code == 401
+
+        # 8. Login with new password must succeed
+        r_new_login = client.post("/api/v1/auth/login", json={"email": email, "password": new_pw})
+        assert r_new_login.status_code == 200
+        assert "access_token" in r_new_login.json()
+    finally:
+        db.close()
+
+
 

@@ -115,7 +115,13 @@ function AppContent() {
 
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} metrics={metrics} />
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        metrics={metrics}
+        user={user}
+        onLogout={handleLogout}
+      />
       <div className="main-content">
         <Navbar
           user={user}

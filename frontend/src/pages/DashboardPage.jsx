@@ -41,28 +41,36 @@ export default function DashboardPage({ metrics, onNavigate, onInvestigateFindin
           <span className="badge badge-provenance">EMPTY STATE</span>
         </div>
 
-        <div className="soc-card" style={{ padding: '64px 32px', textAlign: 'center' }}>
-          <div className="empty-state-icon" style={{ margin: '0 auto 16px' }}>
-            <CloudIcon size={24} color="#60a5fa" />
+        <div className="soc-card" style={{ padding: '48px 32px', textAlign: 'center', maxWidth: '640px', margin: '40px auto' }}>
+          <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', background: 'var(--color-primary-subtle)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/cloudguard-mark.svg" alt="CloudGuard" style={{ width: '28px', height: '28px' }} />
           </div>
-          <h2 className="empty-state-title" style={{ fontSize: '18px', marginBottom: '8px' }}>
-            No Cloud Resources or Telemetry Ingested
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
+            Welcome to CloudGuard AI
           </h2>
-          <p className="empty-state-desc" style={{ margin: '0 auto 24px' }}>
-            No cloud connectors are currently active and no evidence files have been imported.
-            Connect AWS, Azure, GCP or upload infrastructure definitions (JSON / Terraform) to begin continuous security evaluation.
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+            Your enterprise security operations center is ready. Get started in three simple steps:
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" onClick={() => onNavigate('datasources')}>
-              <UploadIcon size={14} />
-              <span>Ingest Cloud Evidence / Connect Account</span>
-            </button>
-            <button className="btn btn-secondary" onClick={() => onNavigate('settings')}>
-              <TerminalIcon size={14} />
-              <span>Inspect Platform Settings</span>
-            </button>
+          <div style={{ textAlign: 'left', background: 'var(--bg-panel)', padding: '16px 20px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-primary)' }}>
+              <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--color-primary)', color: '#ffffff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>1</span>
+              <span><strong>Add a data source</strong> (connect cloud or upload JSON / CSV / Terraform)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-primary)' }}>
+              <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--color-primary-subtle)', color: 'var(--color-primary)', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>2</span>
+              <span><strong>Run policy evaluation</strong> (26+ native CIS Benchmark rules)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-primary)' }}>
+              <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--color-primary-subtle)', color: 'var(--color-primary)', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>3</span>
+              <span><strong>Review findings</strong> and execute verified self-healing playbooks</span>
+            </div>
           </div>
+
+          <button className="btn btn-primary" onClick={() => onNavigate('datasources')} style={{ padding: '10px 24px', fontSize: '13px' }}>
+            <UploadIcon size={15} />
+            <span>Add Data Source →</span>
+          </button>
         </div>
       </div>
     );

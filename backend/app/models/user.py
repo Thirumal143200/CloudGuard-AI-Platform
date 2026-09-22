@@ -38,3 +38,20 @@ class User(Base, TimestampMixin):
 
     def __repr__(self):
         return f"<User {self.email} ({self.role})>"
+
+
+class PasswordResetOTP(Base, TimestampMixin):
+    """Cryptographically protected single-use OTP for secure password resets."""
+    __tablename__ = "password_reset_otps"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    otp_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    attempts_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    def __repr__(self):
+        return f"<PasswordResetOTP for {self.email} (used={self.is_used}, attempts={self.attempts_count})>"
