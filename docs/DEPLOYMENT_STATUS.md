@@ -24,12 +24,12 @@
 ### B. Production Cloud Deployment (Render + Supabase + Vercel)
 | Component | Target URL | Platform | Status | Verification Note |
 | :--- | :--- | :---: | :---: | :--- |
+| **Frontend Web App** | `https://cloud-guard-ai-platform.vercel.app` | `Vercel (Vite SPA)` | `WORKING` | Verified live: HTTP 200 OK (Vite bundle rendered) |
 | **Database** | Supabase Connection URI | `Supabase PostgreSQL` | `CONFIGURED` | Managed PostgreSQL with SSL & connection pooler |
-| **Backend API** | `https://<backend-service>.onrender.com` | `Render Web Service` | `CONFIGURED` | Docker container on Render with dynamic `$PORT` & `/health` |
-| **Frontend Web App** | `https://<frontend-project>.vercel.app` | `Vercel (Vite SPA)` | `CONFIGURED` | Vite SPA with `vercel.json` rewrites & dynamic `VITE_API_URL` |
-| **Swagger UI** | `https://<backend-service>.onrender.com/docs` | `Render Web Service` | `CONFIGURED` | OpenAPI 3.1 docs live on Render |
+| **Backend API** | `https://<backend-service>.onrender.com` | `Render Web Service` | `CONFIGURED` | Awaiting Render service deployment |
+| **Swagger UI** | `https://<backend-service>.onrender.com/docs` | `Render Web Service` | `CONFIGURED` | Awaiting Render service deployment |
 
-*Note: In accordance with the project's absolute rule, cloud production URLs are marked `CONFIGURED` and will only be marked `HEALTHY` / `WORKING` after live HTTP probes return 200 OK from the deployed Render and Vercel domains.*
+*Note: In accordance with the project's absolute rule, public URLs are only marked `WORKING` after live HTTP probes return 200 OK from the deployed public domains. Vercel frontend has been verified live.*
 
 ---
 
