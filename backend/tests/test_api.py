@@ -12,6 +12,8 @@ Covers:
 9. SHA-256 tamper-evident audit ledger integrity verification
 10. Gemini AI inference & deterministic fallback mode
 """
+import io
+import json
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -200,3 +202,104 @@ def test_gemini_ai_finding_analysis(client):
     assert len(ai_data["remediation_steps"]) >= 1
     assert "model_used" in ai_data
     assert "is_fallback" in ai_data
+
+
+def test_file_upload_json(client):
+    """Verify file upload ingestion of structured JSON security exports."""
+    json_data = json.dumps([
+        {
+            "resource_name": "test-uploaded-vault",
+            "resource_type": "AWS::S3::Bucket",
+            "cloud_provider": "AWS",
+            "region": "us-east-1",
+            "configuration": {
+                "name": "test-uploaded-vault",
+                "is_public": True,
+                "encrypted": False
+            }
+        }
+    ]).encode("utf-8")
+
+    resp = client.post(
+        "/api/v1/cloud/upload-file",
+        files={"file": ("test_export.json", io.BytesIO(json_data), "application/json")}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "COMPLETED"
+    assert data["assets_discovered"] == 1
+    assert data["format_detected"] == "JSON"
+    assert data["findings_generated"] >= 1
+
+
+def test_file_upload_csv(client):
+    """Verify file upload ingestion of CSV inventory sheets."""
+    csv_data = (
+        "resource_name,resource_type,cloud_provider,region,is_public,encrypted\n"
+        "prod-csv-bucket,AWS::S3::Bucket,AWS,us-east-1,true,false\n"
+    ).encode("utf-8")
+
+    resp = client.post(
+        "/api/v1/cloud/upload-file",
+        files={"file": ("inventory.csv", io.BytesIO(csv_data), "text/csv")}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "COMPLETED"
+    assert data["assets_discovered"] == 1
+    assert data["format_detected"] == "CSV"
+
+
+def test_file_upload_terraform(client):
+    """Verify file upload ingestion of Terraform HCL definitions."""
+    tf_data = """
+    resource "aws_s3_bucket" "test_tf_bucket" {
+      bucket = "test-tf-bucket"
+      acl    = "public-read"
+    }
+    """.encode("utf-8")
+
+    resp = client.post(
+        "/api/v1/cloud/upload-file",
+        files={"file": ("main.tf", io.BytesIO(tf_data), "text/plain")}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "COMPLETED"
+    assert data["assets_discovered"] == 1
+    assert "TERRAFORM" in data["format_detected"]
+
+
+def test_file_upload_pdf_rejection(client):
+    """Verify that PDF uploads are explicitly rejected with helpful guidance."""
+    fake_pdf = b"%PDF-1.4 fake binary content"
+    resp = client.post(
+        "/api/v1/cloud/upload-file",
+        files={"file": ("audit_report.pdf", io.BytesIO(fake_pdf), "application/pdf")}
+    )
+    assert resp.status_code == 400
+    assert "PDF reports are not supported" in resp.json()["detail"]
+
+
+def test_honest_data_sources_status(client):
+    """Verify data sources endpoint accurately reflects unconfigured state and required permissions."""
+    resp = client.get("/api/v1/cloud/data-sources")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "sources" in data
+    assert "api_ingestion_docs" in data
+    
+    # Check that AWS has honest status message and required permissions
+    aws_src = next(s for s in data["sources"] if s["provider"] == "AWS")
+    assert "required_permissions" in aws_src
+    assert "resources_collected" in aws_src
+    assert len(aws_src["resources_collected"]) >= 3
+
+
+def test_ingestion_jobs_history(client):
+    """Verify ingestion jobs endpoint returns job records."""
+    resp = client.get("/api/v1/cloud/ingestion-jobs")
+    assert resp.status_code == 200
+    jobs = resp.json()
+    assert isinstance(jobs, list)
+

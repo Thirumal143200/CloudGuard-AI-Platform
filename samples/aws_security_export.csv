@@ -1,0 +1,5 @@
+resource_name,resource_type,cloud_provider,region,is_public,encrypted,sample_metadata
+prod-analytics-telemetry-lake,AWS::S3::Bucket,AWS,us-east-1,true,false,DEMO DATASET — SIMULATED FOR EVALUATION
+sg-corp-app-server-ingress,AWS::EC2::SecurityGroup,AWS,us-east-1,true,true,DEMO DATASET — SIMULATED FOR EVALUATION
+rds-mysql-analytics-replica,AWS::RDS::DBInstance,AWS,us-west-2,true,false,DEMO DATASET — SIMULATED FOR EVALUATION
+az-storage-public-blobs,Microsoft.Storage/storageAccounts,AZURE,eastus,true,true,DEMO DATASET — SIMULATED FOR EVALUATION

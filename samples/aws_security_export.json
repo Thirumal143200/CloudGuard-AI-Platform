@@ -1,0 +1,93 @@
+[
+  {
+    "resource_name": "prod-customer-financial-vault-2026",
+    "resource_type": "AWS::S3::Bucket",
+    "cloud_provider": "AWS",
+    "region": "us-east-1",
+    "native_id": "arn:aws:s3:::prod-customer-financial-vault-2026",
+    "configuration": {
+      "name": "prod-customer-financial-vault-2026",
+      "is_public": true,
+      "acl_public_read": true,
+      "encrypted": false,
+      "server_side_encryption_configuration": null,
+      "public_access_block": {
+        "BlockPublicAcls": false,
+        "BlockPublicPolicy": false,
+        "IgnorePublicAcls": false,
+        "RestrictPublicBuckets": false
+      },
+      "versioning": { "status": "Disabled" },
+      "logging": { "target_bucket": null }
+    },
+    "tags": {
+      "Environment": "Production",
+      "DataClassification": "Restricted-Financial",
+      "Sample": "DEMO DATASET — SIMULATED FOR EVALUATION"
+    }
+  },
+  {
+    "resource_name": "sg-production-database-dmz",
+    "resource_type": "AWS::EC2::SecurityGroup",
+    "cloud_provider": "AWS",
+    "region": "us-east-1",
+    "native_id": "sg-0912384756abcdef",
+    "configuration": {
+      "group_name": "sg-production-database-dmz",
+      "security_group_rules": [
+        {
+          "port": 22,
+          "cidr_ipv4": "0.0.0.0/0",
+          "description": "Unrestricted SSH Admin Ingress"
+        },
+        {
+          "port": 5432,
+          "cidr_ipv4": "0.0.0.0/0",
+          "description": "Public PostgreSQL Database Port"
+        },
+        {
+          "port": 443,
+          "cidr_ipv4": "0.0.0.0/0",
+          "description": "HTTPS"
+        }
+      ]
+    },
+    "tags": {
+      "Tier": "Database",
+      "Sample": "DEMO DATASET — SIMULATED FOR EVALUATION"
+    }
+  },
+  {
+    "resource_name": "ci-cd-deployer-root-admin",
+    "resource_type": "AWS::IAM::User",
+    "cloud_provider": "AWS",
+    "region": "global",
+    "native_id": "arn:aws:iam::123456789012:user/ci-cd-deployer-root-admin",
+    "configuration": {
+      "username": "ci-cd-deployer-root-admin",
+      "policies": [
+        {
+          "policy_name": "FullAdministratorAccess",
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": "*",
+              "Resource": "*"
+            }
+          ]
+        }
+      ],
+      "access_keys": [
+        {
+          "key_id": "DEMO_KEY_UNROTATED_240_DAYS",
+          "age_days": 240,
+          "status": "Active"
+        }
+      ]
+    },
+    "tags": {
+      "Role": "CI-CD",
+      "Sample": "DEMO DATASET — SIMULATED FOR EVALUATION"
+    }
+  }
+]

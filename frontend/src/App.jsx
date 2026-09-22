@@ -123,6 +123,7 @@ function AppContent() {
           onSeedDemo={handleSeedDemo}
           systemStatus={systemStatus}
           activeTab={activeTab}
+          onRefreshMetrics={loadDashboardMetrics}
         />
         <main style={{ flex: 1, minHeight: 0 }}>
           {activeTab === 'dashboard' && (
@@ -146,7 +147,10 @@ function AppContent() {
           {activeTab === 'compliance' && <CompliancePage />}
           {activeTab === 'audit' && <AuditLogPage />}
           {activeTab === 'datasources' && (
-            <DataSourcesPage onDataModified={loadDashboardMetrics} />
+            <DataSourcesPage
+              onDataModified={loadDashboardMetrics}
+              onNavigateToFindings={() => setActiveTab('findings')}
+            />
           )}
           {activeTab === 'settings' && <SettingsPage />}
         </main>

@@ -102,6 +102,31 @@ export const api = {
 
   // Data Sources & Ingestion
   getDataSources: () => apiRequest('/cloud/data-sources'),
+  uploadSecurityFile: async (file) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_BASE_URL}/cloud/upload-file`;
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `Error ${res.status}: ${res.statusText}` }));
+      throw new Error(err.detail || `Upload failed with HTTP ${res.status}`);
+    }
+
+    return await res.json();
+  },
+  getIngestionJobs: () => apiRequest('/cloud/ingestion-jobs'),
   uploadEvidence: (data) => apiRequest('/cloud/upload-evidence', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -136,6 +161,8 @@ export const {
   analyzeFindingAI,
   seedDemoData,
   getDataSources,
+  uploadSecurityFile,
+  getIngestionJobs,
   uploadEvidence,
   triggerRescan,
   clearAllData,

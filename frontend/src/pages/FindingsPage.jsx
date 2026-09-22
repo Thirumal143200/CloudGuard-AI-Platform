@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getFindings, analyzeFindingAI } from '../services/api';
-import EvidenceDrawer from '../components/EvidenceDrawer';
-import AICopilotDrawer from '../components/AICopilotDrawer';
-import { SearchIcon, RefreshIcon, FilterIcon, TerminalIcon, ShieldIcon } from '../components/Icons';
+import { getFindings } from '../services/api';
+import FindingDetailModal from '../components/FindingDetailModal';
+import { SearchIcon, RefreshIcon, ShieldIcon, TerminalIcon } from '../components/Icons';
 import { useToast } from '../components/Toast';
 
 export default function FindingsPage({ onNavigateToRemediation }) {
@@ -13,10 +12,8 @@ export default function FindingsPage({ onNavigateToRemediation }) {
   const [providerFilter, setProviderFilter] = useState('ALL');
   const [search, setSearch] = useState('');
 
-  // Drawer states
+  // Unified Finding Detail Modal
   const [selectedFinding, setSelectedFinding] = useState(null);
-  const [aiAnalysis, setAiAnalysis] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     loadFindings();
@@ -36,27 +33,12 @@ export default function FindingsPage({ onNavigateToRemediation }) {
     }
   }
 
-  async function handleInvestigateAI(finding) {
-    setSelectedFinding(null); // Close evidence drawer
-    setAiLoading(true);
-    setAiAnalysis(null);
-    try {
-      const analysis = await analyzeFindingAI(finding.id);
-      setAiAnalysis(analysis);
-      showToast(`AI Analysis generated for ${finding.rule_id}`, 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Gemini AI inference request failed', 'error');
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
   const filteredFindings = findings.filter((f) => {
     const matchesSearch =
       f.title?.toLowerCase().includes(search.toLowerCase()) ||
       f.rule_id?.toLowerCase().includes(search.toLowerCase()) ||
-      f.resource_id?.toLowerCase().includes(search.toLowerCase());
+      f.resource_id?.toLowerCase().includes(search.toLowerCase()) ||
+      f.resource_name?.toLowerCase().includes(search.toLowerCase());
 
     const matchesProvider =
       providerFilter === 'ALL' ||
@@ -69,9 +51,12 @@ export default function FindingsPage({ onNavigateToRemediation }) {
     <div className="page-body">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Security Findings & Misconfigurations</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <h1 className="page-title">Security Findings & Misconfigurations</h1>
+            <span className="badge badge-provenance">CIS BENCHMARKS</span>
+          </div>
           <p className="page-desc">
-            Evaluated by 26+ deterministic CIS Benchmark & PCI-DSS compliance rules with automated Gemini AI root-cause isolation.
+            Evaluated by 26+ deterministic CIS Benchmark & PCI-DSS policy rules. Threat analysis, root-cause isolation, and remediation available per finding.
           </p>
         </div>
         <button
@@ -161,8 +146,13 @@ export default function FindingsPage({ onNavigateToRemediation }) {
                   </td>
                   <td>
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{f.title}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {f.category || 'Cloud Configuration'}
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {f.is_simulated ? (
+                        <span className="badge badge-demo" style={{ fontSize: '9px', padding: '1px 5px', marginRight: '6px' }}>
+                          DEMO DATASET
+                        </span>
+                      ) : null}
+                      {f.resource_type || 'Cloud Resource'}
                     </div>
                   </td>
                   <td>
@@ -172,14 +162,14 @@ export default function FindingsPage({ onNavigateToRemediation }) {
                   </td>
                   <td>
                     <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
-                      {f.resource_id}
+                      {f.resource_name || f.resource_id}
                     </div>
                     <span className={`badge badge-provenance ${f.cloud_provider === 'aws' ? 'badge-provenance-aws' : f.cloud_provider === 'azure' ? 'badge-provenance-azure' : 'badge-provenance-gcp'}`} style={{ marginTop: '3px' }}>
                       {f.cloud_provider?.toUpperCase() || 'AWS'}
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${f.status === 'REMEDIATED' ? 'badge-safe' : 'badge-low'}`}>
+                    <span className={`badge ${f.status === 'RESOLVED' || f.status === 'REMEDIATED' ? 'badge-safe' : 'badge-low'}`}>
                       {f.status}
                     </span>
                   </td>
@@ -190,15 +180,7 @@ export default function FindingsPage({ onNavigateToRemediation }) {
                         className="btn btn-secondary btn-sm"
                         onClick={() => setSelectedFinding(f)}
                       >
-                        Evidence
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleInvestigateAI(f)}
-                      >
-                        <TerminalIcon size={12} />
-                        <span>Gemini AI</span>
+                        Inspect Details
                       </button>
                     </div>
                   </td>
@@ -209,23 +191,17 @@ export default function FindingsPage({ onNavigateToRemediation }) {
         </table>
       </div>
 
-      {/* Evidence Drawer */}
-      <EvidenceDrawer
-        finding={selectedFinding}
-        onClose={() => setSelectedFinding(null)}
-        onInvestigateAI={handleInvestigateAI}
-        onRemediate={(f) => {
-          setSelectedFinding(null);
-          onNavigateToRemediation(f);
-        }}
-      />
-
-      {/* Gemini AI Copilot Drawer */}
-      <AICopilotDrawer
-        analysis={aiAnalysis}
-        loading={aiLoading}
-        onClose={() => setAiAnalysis(null)}
-      />
+      {/* Unified Finding Detail Modal */}
+      {selectedFinding && (
+        <FindingDetailModal
+          finding={selectedFinding}
+          onClose={() => setSelectedFinding(null)}
+          onNavigateToRemediation={(f) => {
+            setSelectedFinding(null);
+            if (onNavigateToRemediation) onNavigateToRemediation(f);
+          }}
+        />
+      )}
     </div>
   );
 }
