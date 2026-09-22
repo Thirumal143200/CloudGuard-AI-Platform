@@ -6,9 +6,17 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 from app.config import settings
 
 
+connect_args = {}
+if "sqlite" in settings.DATABASE_URL:
+    connect_args["check_same_thread"] = False
+elif "supabase" in settings.DATABASE_URL or "pooler.supabase.com" in settings.DATABASE_URL:
+    connect_args["sslmode"] = "require"
+
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    pool_recycle=300,
     echo=settings.DEBUG,
 )
 

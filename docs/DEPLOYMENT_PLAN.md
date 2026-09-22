@@ -1,113 +1,133 @@
-# CloudGuard AI — Production Deployment Plan & Railway Architecture
+# CloudGuard AI — Production Deployment Plan: Render + Supabase + Vercel
 
 **Version:** 2.0  
-**Target Environments:** Railway (Cloud Production), Docker Compose (Local Staging)
+**Target Architecture:**
+- **Backend:** Render (Docker Web Service)
+- **Database:** Supabase (Managed PostgreSQL)
+- **Frontend:** Vercel (Vite Single Page Application)
+- **Repository:** `https://github.com/Thirumal143200/CloudGuard-AI-Platform`
 
 ---
 
-## 1. Local Development Quickstart
+## 1. Architecture Overview
 
-### Backend:
+```
+                      ┌────────────────────────────────────────┐
+                      │          VERCEL (Frontend)             │
+                      │  https://<app>.vercel.app              │
+                      │  React 18 + Vite (SPA)                 │
+                      │  Root: /frontend | Output: dist        │
+                      └──────────────────┬─────────────────────┘
+                                         │ HTTPS / REST API
+                                         │ VITE_API_URL
+                                         ▼
+                      ┌────────────────────────────────────────┐
+                      │          RENDER (Backend)              │
+                      │  https://<service>.onrender.com        │
+                      │  FastAPI + Uvicorn (Docker)            │
+                      │  Root: /backend | Port: $PORT (10000)  │
+                      └──────────────────┬─────────────────────┘
+                                         │ PostgreSQL / SSL
+                                         │ DATABASE_URL
+                                         ▼
+                      ┌────────────────────────────────────────┐
+                      │        SUPABASE (PostgreSQL 16)        │
+                      │  aws-0-[region].pooler.supabase.com    │
+                      │  Port: 6543 (Pooler) or 5432 (Direct)  │
+                      └────────────────────────────────────────┘
+```
+
+---
+
+## 2. Component Specifications
+
+### A. Database: Supabase PostgreSQL
+1. Create a Project on [Supabase](https://supabase.com/).
+2. Navigate to **Project Settings** → **Database** → **Connection String**.
+3. Copy the **URI** connection string:
+   - **Transaction Pooler (Recommended for Serverless/Containers):**
+     `postgresql://postgres.[project-ref]:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres`
+   - **Direct Connection:**
+     `postgresql://postgres:[YOUR-PASSWORD]@db.[project-ref].supabase.co:5432/postgres`
+4. Replace `[YOUR-PASSWORD]` with your actual database password.
+5. In CloudGuard AI, `backend/app/database.py` automatically configures `pool_pre_ping=True`, `pool_recycle=300`, and `sslmode=require` for Supabase.
+
+---
+
+### B. Backend: Render Web Service
+1. In the [Render Dashboard](https://dashboard.render.com/), click **New** → **Web Service**.
+2. Connect your GitHub repository: `https://github.com/Thirumal143200/CloudGuard-AI-Platform`.
+3. Configure the service:
+   - **Name:** `cloudguard-ai-backend` (or your preferred name)
+   - **Region:** Choose the region closest to your Supabase database (e.g., Oregon, Frankfurt, Singapore).
+   - **Branch:** `main`
+   - **Root Directory:** `backend`
+   - **Runtime:** `Docker`
+   - **Instance Type:** Free or Starter
+4. Render automatically detects `backend/Dockerfile`.
+5. Under **Advanced** → **Health Check Path**, enter: `/health`
+6. Under **Environment Variables**, add:
+
+| Variable | Value / Description | Secret |
+|:---|:---|:---:|
+| `ENVIRONMENT` | `production` | No |
+| `DEPLOYMENT_MODE` | `DEMO` *(or `PRODUCTION` once cloud credentials added)* | No |
+| `DATABASE_URL` | Your Supabase PostgreSQL URI string | **Yes** |
+| `JWT_SECRET` | 64-character high-entropy random hex (`openssl rand -hex 32`) | **Yes** |
+| `JWT_REFRESH_SECRET` | 64-character high-entropy random hex (`openssl rand -hex 32`) | **Yes** |
+| `ENCRYPTION_KEY` | Exactly 64 hex characters (32 raw bytes) | **Yes** |
+| `CORS_ORIGIN` | `https://<your-vercel-app>.vercel.app` *(add after frontend deployed)* | No |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | No |
+| `GEMINI_API_KEY` | Google AI Studio key *(Optional: leave empty for rule/ML fallback)* | **Yes** |
+
+7. Click **Create Web Service**.
+8. Render will build the Docker container, run `alembic upgrade head` to provision all 20 tables in Supabase, and start Uvicorn on Render's dynamic `$PORT`.
+9. Copy your public Render URL (e.g. `https://cloudguard-ai-backend.onrender.com`).
+
+---
+
+### C. Frontend: Vercel Deployment
+1. In the [Vercel Dashboard](https://vercel.com/dashboard), click **Add New** → **Project**.
+2. Import `https://github.com/Thirumal143200/CloudGuard-AI-Platform`.
+3. Configure Project Settings:
+   - **Framework Preset:** `Vite`
+   - **Root Directory:** Click **Edit** and select `frontend`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+4. Under **Environment Variables**, add:
+   - **Key:** `VITE_API_URL`
+   - **Value:** Your actual Render backend URL (e.g., `https://cloudguard-ai-backend.onrender.com`)
+5. Click **Deploy**.
+6. Vercel compiles the React application and deploys it to `https://<your-app>.vercel.app`.
+7. Client-side routing is automatically handled by `frontend/vercel.json` rewrites.
+
+---
+
+## 3. Post-Deployment Verification Sequence
+
+Once both services are deployed, perform the live verification audit:
+
 ```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate     # Windows
-source venv/bin/activate  # Linux/macOS
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+# 1. Verify Backend Basic Health
+curl -s -i https://<your-backend>.onrender.com/health
+# Expected: HTTP 200 OK with {"status": "ok", "environment": "production"}
+
+# 2. Verify Supabase Database Readiness
+curl -s -i https://<your-backend>.onrender.com/health/ready
+# Expected: HTTP 200 OK with {"status": "ok", "ready": true, "database": "connected"}
+
+# 3. Verify System Status Matrix
+curl -s -i https://<your-backend>.onrender.com/api/system/status
+# Expected: HTTP 200 OK with sanitized system status (zero secrets exposed)
+
+# 4. Verify Swagger Interactive API Docs
+curl -s -i https://<your-backend>.onrender.com/docs
+# Expected: HTTP 200 OK
+
+# 5. Verify Frontend Application
+curl -s -i https://<your-frontend>.vercel.app
+# Expected: HTTP 200 OK
 ```
 
-### Frontend:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## 2. Docker Compose (Local Multi-Container Staging)
-
-The project includes multi-stage container configurations in `docker-compose.yml`:
-- `cloudguard-db`: PostgreSQL 16 Alpine with health check and persistent volume.
-- `cloudguard-backend`: Python 3.11-slim, running Alembic migration on boot and FastAPI with Uvicorn.
-- `cloudguard-frontend`: Node 20 build + Nginx serving compiled React assets and reverse-proxying `/api/` and `/health`.
-
-```bash
-docker compose up --build -d
-```
-
----
-
-## 3. Railway Cloud Production Architecture (Split Services)
-
-CloudGuard AI is architected on Railway as three connected services in a single Project:
-
-```
-┌────────────────────────────────────────────────────────┐
-│               RAILWAY PROJECT                          │
-│                                                        │
-│  ┌─────────────────────────┐                           │
-│  │   PostgreSQL Plugin     │                           │
-│  │   Managed Database      │                           │
-│  └───────────┬─────────────┘                           │
-│              │ DATABASE_URL                            │
-│              ▼                                         │
-│  ┌─────────────────────────┐                           │
-│  │   cloudguard-backend    │◀── Internal / Public API  │
-│  │   Root: /backend        │    (FastAPI + Uvicorn)    │
-│  │   Port: Dynamic $PORT   │                           │
-│  └───────────▲─────────────┘                           │
-│              │ VITE_API_URL                            │
-│  ┌───────────┴─────────────┐                           │
-│  │   cloudguard-frontend   │─── Public Web App         │
-│  │   Root: /frontend       │    (React 18 + Nginx)     │
-│  │   Port: Dynamic $PORT   │                           │
-│  └─────────────────────────┘                           │
-└────────────────────────────────────────────────────────┘
-```
-
-### Service Breakdown & Configuration
-
-#### Service 1: `PostgreSQL` (Database)
-- **Type:** Add Plugin → PostgreSQL
-- **Configuration:** Fully managed by Railway.
-- **Variable Exported:** `DATABASE_URL` (automatically available to reference in backend as `${{Postgres.DATABASE_URL}}`).
-
-#### Service 2: `cloudguard-backend` (API Gateway)
-- **Source Repo:** `https://github.com/Thirumal143200/CloudGuard-AI-Platform`
-- **Root Directory:** `/backend`
-- **Builder:** Dockerfile (`backend/Dockerfile`) or Nixpacks with `backend/Procfile`
-- **Start Command:** `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}`
-- **Health Check Path:** `/health`
-- **Port:** Automatically injected by Railway via `$PORT`
-- **Required Variables:**
-  - `DATABASE_URL`: `${{Postgres.DATABASE_URL}}`
-  - `ENVIRONMENT`: `production`
-  - `DEPLOYMENT_MODE`: `DEMO` (or `PRODUCTION` once cloud credentials added)
-  - `JWT_SECRET`: High-entropy 64-character hex string (`openssl rand -hex 32`)
-  - `JWT_REFRESH_SECRET`: High-entropy 64-character hex string
-  - `ENCRYPTION_KEY`: Exactly 64 hex characters (32 raw bytes)
-  - `CORS_ORIGIN`: URL of frontend service (e.g. `https://cloudguard-frontend-production.up.railway.app`)
-  - `GEMINI_API_KEY`: *(Optional)* Google Gemini API key for GenAI mode (graceful fallback if omitted)
-  - `GEMINI_MODEL`: `gemini-2.5-flash`
-
-#### Service 3: `cloudguard-frontend` (Single Page Application)
-- **Source Repo:** `https://github.com/Thirumal143200/CloudGuard-AI-Platform`
-- **Root Directory:** `/frontend`
-- **Builder:** Dockerfile (`frontend/Dockerfile`) or Node (`npm run build`)
-- **Health Check Path:** `/`
-- **Port:** Automatically injected by Railway via `$PORT` (Nginx templates `${PORT}`)
-- **Build Argument / Variable:**
-  - `VITE_API_URL`: URL of backend service (e.g. `https://cloudguard-backend-production.up.railway.app`)
-
----
-
-## 4. Production Health & Readiness Verification
-
-Once deployed to Railway, execute the public probe checklist:
-1. `GET https://<backend-url>/health` → `200 OK`
-2. `GET https://<backend-url>/health/live` → `200 OK`
-3. `GET https://<backend-url>/health/ready` → `200 OK` (verifies PostgreSQL connectivity)
-4. `GET https://<backend-url>/api/system/status` → `200 OK` (verifies sanitized telemetry status)
-5. `GET https://<frontend-url>/` → `200 OK` (verifies web UI rendering)
+8. Open `https://<your-frontend>.vercel.app` in your web browser.
+9. Verify that findings, risk gauge, and evidence drawer load data from the Render API connected to Supabase.
