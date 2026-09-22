@@ -1,4 +1,4 @@
-"""CloudGuard AI — Email Delivery Service
+﻿"""CloudGuard AI â€” Email Delivery Service
 Handles secure delivery of authentication OTP verification codes and system security alerts.
 Supports SMTP provider, Resend API, and transparent development fallback.
 """
@@ -25,7 +25,7 @@ class EmailService:
         """Send 6-digit OTP verification code for password reset.
         Returns delivery status dictionary without throwing uncaught exceptions.
         """
-        subject = "CloudGuard AI — Password Reset Verification Code"
+        subject = "CloudGuard AI â€” Password Reset Verification Code"
         
         text_content = f"""Hello,
 
@@ -38,7 +38,7 @@ Your 6-digit verification code is:
 This code will expire in 10 minutes and can only be used once.
 If you did not request this verification code, please ignore this email or notify your security administrator immediately.
 
-— CloudGuard AI Security Operations Team
+â€” CloudGuard AI Security Operations Team
 """
 
         html_content = f"""<!DOCTYPE html>
@@ -57,14 +57,14 @@ If you did not request this verification code, please ignore this email or notif
 <body>
   <div class="card">
     <div class="logo">
-      <span>🛡️ CloudGuard AI</span>
+      <span>ðŸ›¡ï¸ CloudGuard AI</span>
     </div>
     <div class="title">Password Reset Verification</div>
     <p>A password reset request was initiated for your CloudGuard AI account (<strong>{recipient_email}</strong>).</p>
     <p>Use the following single-use verification code to complete your password reset:</p>
     <div class="otp-box">{otp_code}</div>
     <p style="font-size: 13px; color: #475569;">
-      ⏱️ This code expires in <strong>10 minutes</strong>. For your security, this code cannot be reused.
+      â±ï¸ This code expires in <strong>10 minutes</strong>. For your security, this code cannot be reused.
     </p>
     <div class="footer">
       If you did not request a password reset, you can safely disregard this message. Your password will remain unchanged.

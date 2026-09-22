@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: Users, Roles, Authentication"""
+﻿"""CloudGuard AI â€” ORM Models: Users, Roles, Authentication"""
 import enum
 from datetime import datetime
 from typing import Optional
@@ -11,6 +11,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     SECURITY_ANALYST = "SECURITY_ANALYST"
     VIEWER = "VIEWER"
+    ANALYST = "SECURITY_ANALYST"
 
 
 class User(Base, TimestampMixin):

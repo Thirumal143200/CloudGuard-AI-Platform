@@ -1,7 +1,9 @@
-"""CloudGuard AI — API Routes: Gemini AI Deep Threat Investigation & Assistant"""
+﻿"""CloudGuard AI - API Routes: Gemini AI Deep Threat Investigation & Assistant"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.models.user import User, UserRole
+from app.services.auth_service import get_current_user
 from app.models.finding import Finding
 from app.models.resource import CloudResource
 from app.schemas.analytics import GeminiAnalysisRequest, GeminiAnalysisResponse
@@ -11,16 +13,26 @@ router = APIRouter(prefix="/ai", tags=["AI Copilot & GenAI Analysis"])
 
 
 @router.post("/analyze-finding", response_model=GeminiAnalysisResponse)
-def analyze_finding_ai(req: GeminiAnalysisRequest, db: Session = Depends(get_db)):
-    """Run GenAI deep-dive threat analysis and blast radius modeling on a finding."""
+def analyze_finding_ai(
+    req: GeminiAnalysisRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Run GenAI deep-dive threat analysis with finding ownership verification."""
     if not req.target_id:
         raise HTTPException(status_code=400, detail="Finding target_id is required")
 
-    finding = db.query(Finding).filter(Finding.id == req.target_id).first()
+    query = db.query(Finding).filter(Finding.id == req.target_id)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(Finding.user_id == current_user.id)
+    finding = query.first()
     if not finding:
         raise HTTPException(status_code=404, detail="Finding not found")
 
-    resource = db.query(CloudResource).filter(CloudResource.id == finding.resource_id).first()
+    res_query = db.query(CloudResource).filter(CloudResource.id == finding.resource_id)
+    if current_user.role != UserRole.ADMIN:
+        res_query = res_query.filter(CloudResource.user_id == current_user.id)
+    resource = res_query.first()
     res_config = resource.configuration if resource else {}
 
     analysis = gemini_service.analyze_finding(

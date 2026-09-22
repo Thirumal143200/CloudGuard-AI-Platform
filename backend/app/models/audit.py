@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: Tamper-Evident Audit Logging"""
+﻿"""CloudGuard AI â€” ORM Models: Tamper-Evident Audit Logging"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy import Enum as SAEnum, Index

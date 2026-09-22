@@ -1,4 +1,4 @@
-"""CloudGuard AI — Rule Engine: 26+ Comprehensive Multi-Cloud Security Rules with Evidence Extraction"""
+﻿"""CloudGuard AI â€” Rule Engine: 26+ Comprehensive Multi-Cloud Security Rules with Evidence Extraction"""
 from typing import Dict, Any, List, Optional
 import uuid
 from datetime import datetime, timezone

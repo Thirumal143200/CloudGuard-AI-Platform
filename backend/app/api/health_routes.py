@@ -1,4 +1,4 @@
-"""CloudGuard AI — Production Health & Operational Status Endpoints
+﻿"""CloudGuard AI â€” Production Health & Operational Status Endpoints
 
 Exposes health check probes strictly complying with container orchestration:
 - /health: Root health summary

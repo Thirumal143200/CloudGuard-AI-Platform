@@ -1,4 +1,4 @@
-"""CloudGuard AI Platform — Database Engine & Session"""
+﻿"""CloudGuard AI Platform â€” Database Engine & Session"""
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, DateTime, Boolean, String

@@ -17,8 +17,8 @@ export default function LoginPage({ onLoginSuccess }) {
   const [mode, setMode] = useState('LOGIN');
 
   // Form Fields
-  const [email, setEmail] = useState('admin@cloudguard.ai');
-  const [password, setPassword] = useState('Admin@CloudGuard2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -168,11 +168,7 @@ export default function LoginPage({ onLoginSuccess }) {
     }
   };
 
-  const fillDemoCredentials = () => {
-    setEmail('admin@cloudguard.ai');
-    setPassword('Admin@CloudGuard2026!');
-    setError(null);
-  };
+
 
   return (
     <div style={{
@@ -370,16 +366,7 @@ export default function LoginPage({ onLoginSuccess }) {
                   disabled={loading}
                   style={{ width: '100%', padding: '10px', marginTop: '6px', fontSize: '13px' }}
                 >
-                  {loading ? 'Authenticating...' : 'Sign in to CloudGuard'}
-                </button>
-
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={fillDemoCredentials}
-                  style={{ width: '100%', fontSize: '11px', padding: '6px' }}
-                >
-                  Pre-fill Demo Admin Credentials
+                  {loading ? 'Authenticating...' : 'Sign In'}
                 </button>
               </form>
 
@@ -693,3 +680,4 @@ export default function LoginPage({ onLoginSuccess }) {
     </div>
   );
 }
+

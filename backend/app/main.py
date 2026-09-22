@@ -1,4 +1,4 @@
-"""CloudGuard AI — Main FastAPI Application Entrypoint
+﻿"""CloudGuard AI â€” Main FastAPI Application Entrypoint
 
 Configured with:
 - Strict production configuration validation
@@ -40,35 +40,10 @@ async def lifespan(app: FastAPI):
     if settings.ENVIRONMENT.lower() != "production":
         Base.metadata.create_all(bind=engine)
 
-    # 3. Mode-specific initialization
-    db = SessionLocal()
-    try:
-        # Create default admin only in DEMO or development mode
-        if settings.DEPLOYMENT_MODE == "DEMO" or settings.ENVIRONMENT != "production":
-            admin_user = db.query(User).filter(User.email == "admin@cloudguard.ai").first()
-            if not admin_user:
-                admin_user = User(
-                    id="usr-admin-default",
-                    email="admin@cloudguard.ai",
-                    full_name="CloudGuard Lead Architect",
-                    hashed_password=hash_password("Admin@CloudGuard2026!"),
-                    role=UserRole.ADMIN,
-                    is_active=True,
-                    is_locked=False
-                )
-                db.add(admin_user)
-                db.commit()
-
-            # Pre-seed demo cloud infrastructure only in DEMO mode
-            if settings.DEPLOYMENT_MODE == "DEMO":
-                seed_demo_cloud_environment(db)
-
-        # Print sanitized configuration status (NO secrets)
-        status_info = settings.get_sanitized_config_status()
-        print(f"[STARTUP] CloudGuard AI Platform initialized in {settings.ENVIRONMENT} ({settings.DEPLOYMENT_MODE} mode)")
-        print(f"[STARTUP] AI Engine: {status_info['ai']['status']} | DB: {status_info['database']['type']}")
-    finally:
-        db.close()
+    # 3. Mode-specific initialization (Zero default/demo accounts created automatically)
+    status_info = settings.get_sanitized_config_status()
+    print(f"[STARTUP] CloudGuard AI Platform initialized in {settings.ENVIRONMENT} ({settings.DEPLOYMENT_MODE} mode)")
+    print(f"[STARTUP] AI Engine: {status_info['ai']['status']} | DB: {status_info['database']['type']}")
 
     yield
 
@@ -114,3 +89,4 @@ def root():
         "deployment_mode": settings.DEPLOYMENT_MODE,
         "docs_url": "/docs"
     }
+

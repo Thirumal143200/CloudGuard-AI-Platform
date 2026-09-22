@@ -1,4 +1,4 @@
-"""CloudGuard AI — API Routes: Cloud Accounts, Discovered Assets & Ingestion Hub"""
+﻿"""CloudGuard AI - API Routes: Cloud Accounts, Discovered Assets & Ingestion Hub"""
 import json
 import uuid
 import hashlib
@@ -7,6 +7,8 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.models.user import User, UserRole
+from app.services.auth_service import get_current_user
 from app.models.cloud import (
     CloudAccount,
     CloudProviderEnum,
@@ -31,16 +33,27 @@ router = APIRouter(prefix="/cloud", tags=["Cloud Accounts, Resources & Ingestion
 
 
 @router.get("/accounts", response_model=List[CloudAccountResponse])
-def list_accounts(db: Session = Depends(get_db)):
-    """List all connected cloud accounts."""
-    return db.query(CloudAccount).all()
+def list_accounts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List connected cloud accounts scoped to the authenticated user."""
+    query = db.query(CloudAccount)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(CloudAccount.user_id == current_user.id)
+    return query.all()
 
 
 @router.post("/accounts", response_model=CloudAccountResponse)
-def connect_account(acc_in: CloudAccountCreate, db: Session = Depends(get_db)):
-    """Connect a new AWS / Azure / GCP cloud account."""
+def connect_account(
+    acc_in: CloudAccountCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Connect a new AWS / Azure / GCP cloud account for the authenticated user."""
     acc = CloudAccount(
         id=f"acc-{uuid.uuid4().hex[:8]}",
+        user_id=current_user.id,
         name=acc_in.name,
         provider=acc_in.provider,
         account_id=acc_in.account_id,
@@ -58,26 +71,45 @@ def connect_account(acc_in: CloudAccountCreate, db: Session = Depends(get_db)):
         action=AuditActionEnum.CLOUD_SYNC,
         entity_type="CLOUD_ACCOUNT",
         entity_id=acc.id,
-        actor_email="admin@cloudguard.ai",
+        actor_id=current_user.id,
+        actor_email=current_user.email,
         details={"event": "CLOUD_ACCOUNT_CONNECTED", "provider": str(acc.provider), "name": acc.name}
     )
     return acc
 
 
 @router.get("/data-sources")
-def list_data_sources(db: Session = Depends(get_db)):
+def list_data_sources(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     List all data ingestion channels with honest configuration status,
     required permissions, collected resource types, and supported formats.
     """
-    accounts = db.query(CloudAccount).all()
-    resource_count = db.query(CloudResource).count()
-    uploaded_count = db.query(CloudResource).filter(CloudResource.is_simulated == False).count()
+    if current_user.role == UserRole.ADMIN:
+        accounts = db.query(CloudAccount).all()
+        resource_count = db.query(CloudResource).count()
+        uploaded_count = db.query(CloudResource).filter(CloudResource.is_simulated == False).count()
+    else:
+        accounts = db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).all()
+        resource_count = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).count()
+        uploaded_count = db.query(CloudResource).filter(
+            CloudResource.user_id == current_user.id,
+            CloudResource.is_simulated == False
+        ).count()
 
-    # Honest configuration checks based on actual environment variables
     aws_configured = bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_ACCESS_KEY_ID.strip())
     azure_configured = bool(settings.AZURE_CLIENT_ID and settings.AZURE_CLIENT_ID.strip())
     gcp_configured = bool(settings.GCP_PROJECT_ID and settings.GCP_PROJECT_ID.strip())
+
+    aws_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AWS)
+    az_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AZURE)
+    gcp_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.GCP)
+    if current_user.role != UserRole.ADMIN:
+        aws_res_query = aws_res_query.filter(CloudResource.user_id == current_user.id)
+        az_res_query = az_res_query.filter(CloudResource.user_id == current_user.id)
+        gcp_res_query = gcp_res_query.filter(CloudResource.user_id == current_user.id)
 
     sources = [
         {
@@ -96,7 +128,7 @@ def list_data_sources(db: Session = Depends(get_db)):
                 "AWS::CloudTrail::Trail"
             ],
             "last_ingested": next((a.last_sync_at.isoformat() for a in accounts if a.provider == CloudProviderEnum.AWS and a.last_sync_at), None),
-            "assets_discovered": db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AWS).count()
+            "assets_discovered": aws_res_query.count()
         },
         {
             "id": "ds-azure",
@@ -112,7 +144,7 @@ def list_data_sources(db: Session = Depends(get_db)):
                 "Microsoft.Compute/virtualMachines"
             ],
             "last_ingested": next((a.last_sync_at.isoformat() for a in accounts if a.provider == CloudProviderEnum.AZURE and a.last_sync_at), None),
-            "assets_discovered": db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AZURE).count()
+            "assets_discovered": az_res_query.count()
         },
         {
             "id": "ds-gcp",
@@ -128,7 +160,7 @@ def list_data_sources(db: Session = Depends(get_db)):
                 "GCP::IAM::ServiceAccount"
             ],
             "last_ingested": next((a.last_sync_at.isoformat() for a in accounts if a.provider == CloudProviderEnum.GCP and a.last_sync_at), None),
-            "assets_discovered": db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.GCP).count()
+            "assets_discovered": gcp_res_query.count()
         },
         {
             "id": "ds-file-upload",
@@ -175,17 +207,65 @@ def list_data_sources(db: Session = Depends(get_db)):
     }
 
 
+def _record_ingestion_job(
+    db: Session,
+    filename: str,
+    records_count: int,
+    status: JobStatus,
+    user_id: Optional[str] = None,
+    error: Optional[str] = None
+):
+    """Helper to record an ingestion job entry tied to the authenticated user."""
+    try:
+        ds_query = db.query(DataSource).filter(DataSource.name == "File Upload Hub")
+        if user_id:
+            ds_query = ds_query.filter(DataSource.user_id == user_id)
+        ds = ds_query.first()
+
+        if not ds:
+            ds = DataSource(
+                id=f"ds-upload-{uuid.uuid4().hex[:6]}",
+                user_id=user_id,
+                name="File Upload Hub",
+                source_type=DataSourceTypeEnum.USER_UPLOAD,
+                status="ACTIVE",
+                total_records_ingested=0
+            )
+            db.add(ds)
+            db.commit()
+            db.refresh(ds)
+
+        job = IngestionJob(
+            id=f"job-{uuid.uuid4().hex[:8]}",
+            user_id=user_id,
+            data_source_id=ds.id,
+            job_type=f"FILE_UPLOAD ({filename})",
+            status=status,
+            records_processed=records_count,
+            records_failed=0 if status == JobStatus.COMPLETED else 1,
+            error_message=error
+        )
+        db.add(job)
+        ds.total_records_ingested += records_count
+        ds.last_ingested_at = datetime.now(timezone.utc)
+        db.commit()
+        return job
+    except Exception as e:
+        print(f"[WARN] Failed to record IngestionJob: {e}")
+        return None
+
+
 @router.post("/upload-file")
 async def upload_security_file(
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Ingest a security configuration file (JSON, CSV, Terraform HCL, or YAML).
     Validates, parses, discovers assets, evaluates deterministic security rules,
-    and commits audit ledger records.
+    and commits audit ledger records - scoped strictly to the authenticated user.
     """
-    # 1. Read file bytes
     try:
         content_bytes = await file.read()
     except Exception as e:
@@ -194,25 +274,27 @@ async def upload_security_file(
     if not content_bytes or len(content_bytes) == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty (0 bytes).")
 
-    # 2. Parse and normalize using parser service
     try:
         normalized_resources, format_detected = parse_and_normalize_file(file.filename, content_bytes)
     except IngestionParserError as e:
-        # Record failed job if possible
-        _record_ingestion_job(db, filename=file.filename, records_count=0, status=JobStatus.FAILED, error=str(e))
+        _record_ingestion_job(db, filename=file.filename, records_count=0, status=JobStatus.FAILED, user_id=current_user.id, error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        _record_ingestion_job(db, filename=file.filename, records_count=0, status=JobStatus.FAILED, error=str(e))
+        _record_ingestion_job(db, filename=file.filename, records_count=0, status=JobStatus.FAILED, user_id=current_user.id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Unexpected parser failure: {str(e)}")
 
-    # 3. Obtain or create upload cloud account
-    account = db.query(CloudAccount).filter(CloudAccount.name == "User Uploaded Evidence").first()
+    account = db.query(CloudAccount).filter(
+        CloudAccount.name == "User Uploaded Evidence",
+        CloudAccount.user_id == current_user.id
+    ).first()
+
     if not account:
         account = CloudAccount(
             id=f"acc-upload-{uuid.uuid4().hex[:6]}",
+            user_id=current_user.id,
             name="User Uploaded Evidence",
             provider=CloudProviderEnum.MULTI,
-            account_id="user-file-upload",
+            account_id=f"user-{current_user.id[:8]}",
             environment="production",
             is_active=True,
             is_simulated=False,
@@ -225,7 +307,6 @@ async def upload_security_file(
     created_resources = []
     all_created_findings = []
 
-    # 4. Ingest each resource, evaluate rules, and save
     for res_dict in normalized_resources:
         res_id = f"res-up-{uuid.uuid4().hex[:8]}"
         provider_str = res_dict.get("provider", "AWS").upper()
@@ -237,6 +318,7 @@ async def upload_security_file(
 
         resource = CloudResource(
             id=res_id,
+            user_id=current_user.id,
             cloud_account_id=account.id,
             provider=provider_enum,
             native_id=res_dict.get("native_id") or f"{res_dict.get('name')}-{uuid.uuid4().hex[:4]}",
@@ -251,7 +333,6 @@ async def upload_security_file(
         db.add(resource)
         db.flush()
 
-        # Deterministic rule evaluation
         detected = evaluate_resource_rules(
             resource_id=res_id,
             resource_type=resource.resource_type,
@@ -269,6 +350,7 @@ async def upload_security_file(
 
             fnd = Finding(
                 id=finding_id,
+                user_id=current_user.id,
                 cloud_account_id=account.id,
                 resource_id=res_id,
                 rule_id=det["rule_id"],
@@ -315,21 +397,21 @@ async def upload_security_file(
 
     db.commit()
 
-    # 5. Record Ingestion Job
     job = _record_ingestion_job(
         db,
         filename=file.filename,
         records_count=len(created_resources),
-        status=JobStatus.COMPLETED
+        status=JobStatus.COMPLETED,
+        user_id=current_user.id
     )
 
-    # 6. Cryptographic Audit Ledger Entry
     log_action(
         db,
         action=AuditActionEnum.INGESTION_COMPLETED,
         entity_type="FILE_INGESTION",
         entity_id=file.filename,
-        actor_email="admin@cloudguard.ai",
+        actor_id=current_user.id,
+        actor_email=current_user.email,
         details={
             "event": "FILE_INGESTION_COMPLETED",
             "filename": file.filename,
@@ -351,45 +433,16 @@ async def upload_security_file(
     }
 
 
-def _record_ingestion_job(db: Session, filename: str, records_count: int, status: JobStatus, error: Optional[str] = None):
-    """Helper to record an ingestion job entry in the database."""
-    try:
-        ds = db.query(DataSource).filter(DataSource.name == "File Upload Hub").first()
-        if not ds:
-            ds = DataSource(
-                id=f"ds-upload-{uuid.uuid4().hex[:6]}",
-                name="File Upload Hub",
-                source_type=DataSourceTypeEnum.USER_UPLOAD,
-                status="ACTIVE",
-                total_records_ingested=0
-            )
-            db.add(ds)
-            db.commit()
-            db.refresh(ds)
-
-        job = IngestionJob(
-            id=f"job-{uuid.uuid4().hex[:8]}",
-            data_source_id=ds.id,
-            job_type=f"FILE_UPLOAD ({filename})",
-            status=status,
-            records_processed=records_count,
-            records_failed=0 if status == JobStatus.COMPLETED else 1,
-            error_message=error
-        )
-        db.add(job)
-        ds.total_records_ingested += records_count
-        ds.last_ingested_at = datetime.now(timezone.utc)
-        db.commit()
-        return job
-    except Exception as e:
-        print(f"[WARN] Failed to record IngestionJob: {e}")
-        return None
-
-
 @router.get("/ingestion-jobs")
-def list_ingestion_jobs(db: Session = Depends(get_db)):
-    """List recent ingestion activity jobs."""
-    jobs = db.query(IngestionJob).order_by(IngestionJob.created_at.desc()).limit(20).all()
+def list_ingestion_jobs(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List recent ingestion jobs belonging to the authenticated user."""
+    query = db.query(IngestionJob)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(IngestionJob.user_id == current_user.id)
+    jobs = query.order_by(IngestionJob.created_at.desc()).limit(20).all()
     return [
         {
             "id": j.id,
@@ -398,7 +451,7 @@ def list_ingestion_jobs(db: Session = Depends(get_db)):
             "records_processed": j.records_processed,
             "records_failed": j.records_failed,
             "error_message": j.error_message,
-            "created_at": j.created_at.isoformat() if j.created_at else None
+            "created_at": j.created_at.isoformat() if hasattr(j.created_at, "isoformat") else str(j.created_at)
         }
         for j in jobs
     ]
@@ -407,31 +460,25 @@ def list_ingestion_jobs(db: Session = Depends(get_db)):
 @router.post("/upload-evidence")
 def upload_evidence(
     payload: Dict[str, Any] = Body(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    API Ingestion: Ingest single cloud resource JSON definition.
-    Evaluates deterministic security rules immediately, creates findings, and records to audit ledger.
+    Direct JSON evidence ingestion for CI/CD pipelines.
+    Always assigns user_id from verified JWT (ignoring any user_id in the payload).
     """
-    name = payload.get("resource_name") or payload.get("name", "Custom API Resource")
-    provider_str = payload.get("cloud_provider") or payload.get("provider", "AWS")
-    provider_str = provider_str.upper()
-    resource_type = payload.get("resource_type", "AWS::S3::Bucket")
-    config = payload.get("configuration", {})
+    account = db.query(CloudAccount).filter(
+        CloudAccount.name == "REST API Ingested Assets",
+        CloudAccount.user_id == current_user.id
+    ).first()
 
-    provider_enum = CloudProviderEnum.AWS
-    if provider_str == "AZURE":
-        provider_enum = CloudProviderEnum.AZURE
-    elif provider_str == "GCP":
-        provider_enum = CloudProviderEnum.GCP
-
-    account = db.query(CloudAccount).filter(CloudAccount.name == "User Uploaded Evidence").first()
     if not account:
         account = CloudAccount(
-            id=f"acc-upload-{uuid.uuid4().hex[:6]}",
-            name="User Uploaded Evidence",
-            provider=provider_enum,
-            account_id="user-api-account",
+            id=f"acc-api-{uuid.uuid4().hex[:6]}",
+            user_id=current_user.id,
+            name="REST API Ingested Assets",
+            provider=CloudProviderEnum.MULTI,
+            account_id=f"api-upload-{current_user.id[:8]}",
             environment="production",
             is_active=True,
             is_simulated=False,
@@ -441,11 +488,23 @@ def upload_evidence(
         db.commit()
         db.refresh(account)
 
+    name = payload.get("name") or f"api-resource-{uuid.uuid4().hex[:6]}"
+    resource_type = payload.get("resource_type") or "AWS::S3::Bucket"
+    provider_str = payload.get("provider", "AWS").upper()
+    config = payload.get("configuration") or {}
+
+    provider_enum = CloudProviderEnum.AWS
+    if provider_str == "AZURE":
+        provider_enum = CloudProviderEnum.AZURE
+    elif provider_str == "GCP":
+        provider_enum = CloudProviderEnum.GCP
+
     res_id = f"res-api-{uuid.uuid4().hex[:8]}"
     native_id = payload.get("native_id", f"{resource_type}-{uuid.uuid4().hex[:6]}")
 
     resource = CloudResource(
         id=res_id,
+        user_id=current_user.id,
         cloud_account_id=account.id,
         provider=provider_enum,
         native_id=native_id,
@@ -478,6 +537,7 @@ def upload_evidence(
 
         fnd = Finding(
             id=finding_id,
+            user_id=current_user.id,
             cloud_account_id=account.id,
             resource_id=res_id,
             rule_id=det["rule_id"],
@@ -519,7 +579,8 @@ def upload_evidence(
         action=AuditActionEnum.INGESTION_COMPLETED,
         entity_type="API_EVIDENCE",
         entity_id=res_id,
-        actor_email="admin@cloudguard.ai",
+        actor_id=current_user.id,
+        actor_email=current_user.email,
         details={
             "event": "API_EVIDENCE_INGESTED",
             "resource_id": res_id,
@@ -542,10 +603,13 @@ def list_resources(
     provider: Optional[str] = Query(None),
     resource_type: Optional[str] = Query(None),
     account_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List all discovered cloud resources with filtering."""
+    """List discovered cloud resources scoped to the authenticated user."""
     query = db.query(CloudResource)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(CloudResource.user_id == current_user.id)
     if provider and provider != "ALL":
         query = query.filter(CloudResource.provider == provider.upper())
     if resource_type:
@@ -556,18 +620,31 @@ def list_resources(
 
 
 @router.get("/resources/{resource_id}", response_model=CloudResourceResponse)
-def get_resource(resource_id: str, db: Session = Depends(get_db)):
-    """Retrieve full configuration snapshot of a specific cloud resource."""
-    res = db.query(CloudResource).filter(CloudResource.id == resource_id).first()
+def get_resource(
+    resource_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieve full configuration snapshot of a specific cloud resource with IDOR protection."""
+    query = db.query(CloudResource).filter(CloudResource.id == resource_id)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(CloudResource.user_id == current_user.id)
+    res = query.first()
     if not res:
         raise HTTPException(status_code=404, detail="Resource not found")
     return res
 
 
 @router.post("/rescan")
-def trigger_rescan(db: Session = Depends(get_db)):
-    """Re-evaluate all discovered resources against the active security rules catalog."""
-    resources = db.query(CloudResource).all()
+def trigger_rescan(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Re-evaluate all discovered resources against active rules catalog for the user."""
+    query = db.query(CloudResource)
+    if current_user.role != UserRole.ADMIN:
+        query = query.filter(CloudResource.user_id == current_user.id)
+    resources = query.all()
     total_evaluated = 0
     new_findings_count = 0
 
@@ -591,6 +668,7 @@ def trigger_rescan(db: Session = Depends(get_db)):
                 finding_id = f"fnd-{uuid.uuid4().hex[:8]}"
                 fnd = Finding(
                     id=finding_id,
+                    user_id=current_user.id,
                     cloud_account_id=res.cloud_account_id,
                     resource_id=res.id,
                     rule_id=det["rule_id"],
@@ -627,7 +705,8 @@ def trigger_rescan(db: Session = Depends(get_db)):
         action=AuditActionEnum.SCAN_COMPLETED,
         entity_type="SYSTEM",
         entity_id="system-rescan",
-        actor_email="admin@cloudguard.ai",
+        actor_id=current_user.id,
+        actor_email=current_user.email,
         details={
             "resources_evaluated": total_evaluated,
             "new_findings": new_findings_count
@@ -642,24 +721,40 @@ def trigger_rescan(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear-data")
-def clear_all_data(db: Session = Depends(get_db)):
-    """Clear all findings, incidents, remediations, and cloud resources to test clean NO_DATA mode."""
-    db.query(FindingEvidence).delete()
-    db.query(Finding).delete()
-    db.query(IncidentTimeline).delete()
-    db.query(Incident).delete()
-    db.query(RemediationPlan).delete()
-    db.query(CloudResource).delete()
-    db.query(CloudAccount).delete()
-    db.query(IngestionJob).delete()
-    db.commit()
+def clear_all_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Clear resources, findings, incidents and jobs belonging to the authenticated user."""
+    if current_user.role == UserRole.ADMIN:
+        db.query(FindingEvidence).delete()
+        db.query(Finding).delete()
+        db.query(IncidentTimeline).delete()
+        db.query(Incident).delete()
+        db.query(RemediationPlan).delete()
+        db.query(CloudResource).delete()
+        db.query(CloudAccount).delete()
+        db.query(IngestionJob).delete()
+        db.commit()
+    else:
+        user_finding_ids = [f.id for f in db.query(Finding.id).filter(Finding.user_id == current_user.id).all()]
+        if user_finding_ids:
+            db.query(FindingEvidence).filter(FindingEvidence.finding_id.in_(user_finding_ids)).delete(synchronize_session=False)
+        db.query(Finding).filter(Finding.user_id == current_user.id).delete()
+        db.query(Incident).filter(Incident.user_id == current_user.id).delete()
+        db.query(RemediationPlan).filter(RemediationPlan.user_id == current_user.id).delete()
+        db.query(CloudResource).filter(CloudResource.user_id == current_user.id).delete()
+        db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).delete()
+        db.query(IngestionJob).filter(IngestionJob.user_id == current_user.id).delete()
+        db.commit()
 
     log_action(
         db,
-        action=AuditActionEnum.RESOURCE_DISCOVERED,
+        action=AuditActionEnum.SYSTEM_CONFIG_CHANGE,
         entity_type="SYSTEM",
-        entity_id="system-purge",
-        actor_email="admin@cloudguard.ai",
-        details={"event": "PLATFORM_DATA_PURGED", "reason": "RESET_FOR_EVALUATION"}
+        entity_id="data-purge",
+        actor_id=current_user.id,
+        actor_email=current_user.email,
+        details={"event": "USER_DATA_PURGED", "user_id": current_user.id}
     )
-    return {"status": "DATA_PURGED", "message": "All resources, findings, and incidents have been cleared."}
+    return {"status": "DATA_PURGED", "message": "Your security findings, assets, and jobs have been cleared."}

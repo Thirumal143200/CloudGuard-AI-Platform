@@ -1,4 +1,4 @@
-"""CloudGuard AI — Schemas: Cloud Accounts, Resources, Findings"""
+﻿"""CloudGuard AI â€” Schemas: Cloud Accounts, Resources, Findings"""
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime

@@ -1,4 +1,4 @@
-"""CloudGuard AI — API Routes: Authentication, User Lifecycle & Secure OTP Password Reset"""
+﻿"""CloudGuard AI â€” API Routes: Authentication, User Lifecycle & Secure OTP Password Reset"""
 import uuid
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -70,6 +70,12 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
+@router.post("/signup", response_model=UserResponse)
+def signup(user_in: UserCreate, db: Session = Depends(get_db)):
+    """Self-service analyst registration endpoint."""
+    return register(user_in=user_in, db=db)
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(creds: UserLogin, db: Session = Depends(get_db)):
     """Authenticate analyst and issue signed JWT access/refresh tokens."""
@@ -116,6 +122,12 @@ def login(creds: UserLogin, db: Session = Depends(get_db)):
         expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=UserResponse.model_validate(user)
     )
+
+
+@router.post("/token", response_model=TokenResponse)
+def login_token(creds: UserLogin, db: Session = Depends(get_db)):
+    """OAuth2/JWT password token endpoint."""
+    return login(creds=creds, db=db)
 
 
 @router.post("/forgot-password", response_model=GenericStatusResponse)
@@ -222,7 +234,7 @@ def verify_otp(req: VerifyOTPRequest, db: Session = Depends(get_db)):
             detail=f"Invalid verification code. {remaining} attempt(s) remaining."
         )
 
-    # Successfully verified — mark used and issue reset token
+    # Successfully verified â€” mark used and issue reset token
     otp_record.is_used = True
     db.commit()
 
@@ -300,3 +312,4 @@ def get_current_user_profile(token_data: dict = Depends(get_current_user_token),
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+

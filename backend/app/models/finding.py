@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: Security Findings, Rules, and Evidence"""
+﻿"""CloudGuard AI - ORM Models: Security Findings, Rules, and Evidence"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float
 from sqlalchemy import Enum as SAEnum, Index
@@ -56,9 +56,10 @@ class Finding(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "findings"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     rule_id: Mapped[str] = mapped_column(String(64), ForeignKey("security_rules.id"), nullable=False, index=True)
     resource_id: Mapped[str] = mapped_column(String(64), ForeignKey("cloud_resources.id"), nullable=False, index=True)
-    cloud_account_id: Mapped[str] = mapped_column(String(64), ForeignKey("cloud_accounts.id"), nullable=False, index=True)
+    cloud_account_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("cloud_accounts.id"), nullable=True, index=True)
     
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
@@ -81,6 +82,8 @@ class Finding(Base, TimestampMixin, SimulatedMixin):
     __table_args__ = (
         Index("ix_finding_account_severity", "cloud_account_id", "severity"),
         Index("ix_finding_account_status", "cloud_account_id", "status"),
+        Index("ix_finding_user_id", "user_id"),
+        Index("ix_finding_user_status", "user_id", "status"),
     )
 
 

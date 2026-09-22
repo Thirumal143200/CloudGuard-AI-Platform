@@ -1,5 +1,5 @@
-"""
-CloudGuard AI — Ingestion Parser Service
+﻿"""
+CloudGuard AI â€” Ingestion Parser Service
 Multi-format parser and normalizer for cloud infrastructure security configurations.
 
 Supported Formats:

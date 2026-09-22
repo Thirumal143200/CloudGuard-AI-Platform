@@ -1,4 +1,4 @@
-"""CloudGuard AI — Schemas: Authentication & Users"""
+﻿"""CloudGuard AI â€” Schemas: Authentication & Users"""
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     full_name: str
     password: str = Field(min_length=8)
-    role: UserRole = UserRole.VIEWER
+    role: UserRole = UserRole.ANALYST
 
 
 class UserLogin(BaseModel):
@@ -68,4 +68,5 @@ class GenericStatusResponse(BaseModel):
     status: str
     message: str
     email_delivery: Optional[str] = None
+
 

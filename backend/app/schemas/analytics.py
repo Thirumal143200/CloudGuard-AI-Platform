@@ -1,4 +1,4 @@
-"""CloudGuard AI — Schemas: Incidents, Remediations, Gemini AI, Analytics"""
+﻿"""CloudGuard AI â€” Schemas: Incidents, Remediations, Gemini AI, Analytics"""
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime

@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: Compliance Frameworks, Controls, and Assessments"""
+﻿"""CloudGuard AI â€” ORM Models: Compliance Frameworks, Controls, and Assessments"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float
 from sqlalchemy import Enum as SAEnum, Index

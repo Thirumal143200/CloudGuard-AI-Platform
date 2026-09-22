@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: Telemetry, Logs, Baselines, and Anomaly Events"""
+﻿"""CloudGuard AI â€” ORM Models: Telemetry, Logs, Baselines, and Anomaly Events"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float
 from sqlalchemy import Enum as SAEnum, Index

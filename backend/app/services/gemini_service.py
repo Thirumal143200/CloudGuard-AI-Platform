@@ -1,4 +1,4 @@
-"""CloudGuard AI — Gemini AI Service: GenAI Provider Configuration & Resilient Fallbacks
+﻿"""CloudGuard AI â€” Gemini AI Service: GenAI Provider Configuration & Resilient Fallbacks
 
 Features:
 - Configurable model via GEMINI_MODEL (e.g., gemini-2.5-flash, gemini-2.0-flash)
@@ -6,7 +6,7 @@ Features:
 - Exponential backoff retry policy
 - Schema-enforced structured JSON output
 - Transparent fallback to deterministic rule engine when offline or unconfigured
-- Explicit AI status reporting (LIVE vs UNAVAILABLE — RULE/ML MODE ACTIVE)
+- Explicit AI status reporting (LIVE vs UNAVAILABLE â€” RULE/ML MODE ACTIVE)
 """
 import json
 import time
@@ -66,7 +66,7 @@ class GeminiAIService:
         """Return explicit, auditable AI provider operational status."""
         if not self.api_key or self.api_key.strip() == "":
             return {
-                "status": "UNAVAILABLE — RULE/ML MODE ACTIVE",
+                "status": "UNAVAILABLE â€” RULE/ML MODE ACTIVE",
                 "reason": "GEMINI_API_KEY is not configured in environment.",
                 "configured": False,
                 "model": self.model_name,
@@ -75,7 +75,7 @@ class GeminiAIService:
 
         if self.client is None:
             return {
-                "status": "UNAVAILABLE — RULE/ML MODE ACTIVE",
+                "status": "UNAVAILABLE â€” RULE/ML MODE ACTIVE",
                 "reason": "SDK initialization failed or library missing.",
                 "configured": True,
                 "model": self.model_name,
@@ -177,7 +177,7 @@ class GeminiAIService:
                 "Apply default KMS CMK encryption across all storage tiers.",
                 "Enable bucket object versioning and MFA delete."
             ]
-            compliance = ["CIS Benchmark 2.1.5", "PCI-DSS Req 3.4", "HIPAA §164.312(a)(2)(iv)"]
+            compliance = ["CIS Benchmark 2.1.5", "PCI-DSS Req 3.4", "HIPAA Â§164.312(a)(2)(iv)"]
         elif "EC2" in rule_id or "NETWORK" in rule_id or "SSH" in title:
             root_cause = "Network security group contains 0.0.0.0/0 ingress on administrative ports."
             blast_radius = "Brute-force password guessing, zero-day remote code execution, automated botnet infestation."
@@ -212,7 +212,7 @@ class GeminiAIService:
             "model_used": "CloudGuard-Expert-RuleBase-Fallback",
             "latency_ms": max(15, latency),
             "is_fallback": True,
-            "fallback_reason": "GEMINI_API_KEY unconfigured or network offline — executed deterministic rule-based analysis.",
+            "fallback_reason": "GEMINI_API_KEY unconfigured or network offline â€” executed deterministic rule-based analysis.",
             "timestamp": datetime.now(timezone.utc)
         }
 

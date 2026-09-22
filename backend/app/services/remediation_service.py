@@ -1,4 +1,4 @@
-"""CloudGuard AI — Remediation Service: CLI / Terraform Code Gen, Dry Run, Execution & Verification Rescan"""
+﻿"""CloudGuard AI â€” Remediation Service: CLI / Terraform Code Gen, Dry Run, Execution & Verification Rescan"""
 import uuid
 import copy
 from typing import Dict, Any, List, Optional

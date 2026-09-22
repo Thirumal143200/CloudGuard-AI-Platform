@@ -1,4 +1,4 @@
-"""CloudGuard AI — Ingestion Service: Multi-Cloud Telemetry & Asset Ingestion + Demo Seed Data Generator"""
+﻿"""CloudGuard AI â€” Ingestion Service: Multi-Cloud Telemetry & Asset Ingestion + Demo Seed Data Generator"""
 import json
 import uuid
 from datetime import datetime, timedelta, timezone

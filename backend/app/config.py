@@ -1,4 +1,4 @@
-"""CloudGuard AI Platform — Strongly-Typed Backend Configuration & Secret Management"""
+﻿"""CloudGuard AI Platform â€” Strongly-Typed Backend Configuration & Secret Management"""
 import os
 import re
 from pathlib import Path

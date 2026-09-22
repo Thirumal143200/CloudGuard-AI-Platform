@@ -1,4 +1,4 @@
-"""CloudGuard AI — Encryption Service: Authenticated AES-256-GCM Key Management
+﻿"""CloudGuard AI â€” Encryption Service: Authenticated AES-256-GCM Key Management
 
 Strictly complies with NIST SP 800-38D:
 - 256-bit key length
@@ -95,7 +95,7 @@ def decrypt_field(cipher_text: str, associated_data: Optional[bytes] = None) -> 
             cipher = raw[28:]
             expected_tag = hashlib.sha256(key + cipher + nonce).digest()[:16]
             if tag != expected_tag:
-                raise ValueError("Authentication tag validation failed — payload tampered")
+                raise ValueError("Authentication tag validation failed â€” payload tampered")
             h = hashlib.sha256(key + nonce).digest()
             plain = bytearray(b ^ h[i % len(h)] for i, b in enumerate(cipher))
             return plain.decode("utf-8")

@@ -1,4 +1,4 @@
-"""CloudGuard AI — Risk Engine: 4-Pillar Evidence-Driven Risk Scoring (40/30/20/10)"""
+﻿"""CloudGuard AI â€” Risk Engine: 4-Pillar Evidence-Driven Risk Scoring (40/30/20/10)"""
 from typing import Dict, Any, List
 from app.models.finding import SeverityEnum
 

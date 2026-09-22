@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: Remediation Plans, Actions, and Verification Scans"""
+﻿"""CloudGuard AI - ORM Models: Remediation Plans, Actions, and Verification Scans"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float
 from sqlalchemy import Enum as SAEnum, Index
@@ -28,12 +28,13 @@ class RemediationPlan(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "remediation_plans"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     
     finding_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("findings.id"), nullable=True, index=True)
     incident_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("incidents.id"), nullable=True, index=True)
-    cloud_account_id: Mapped[str] = mapped_column(String(64), ForeignKey("cloud_accounts.id"), nullable=False, index=True)
+    cloud_account_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("cloud_accounts.id"), nullable=True, index=True)
     
     status: Mapped[RemediationPlanStatus] = mapped_column(SAEnum(RemediationPlanStatus), default=RemediationPlanStatus.PROPOSED, nullable=False, index=True)
     risk_tier: Mapped[ActionRiskTier] = mapped_column(SAEnum(ActionRiskTier), default=ActionRiskTier.HUMAN_CONFIRM, nullable=False)
@@ -58,6 +59,7 @@ class VerificationScan(Base, TimestampMixin):
     __tablename__ = "verification_scans"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     remediation_plan_id: Mapped[str] = mapped_column(String(64), ForeignKey("remediation_plans.id"), nullable=False, index=True)
     resource_id: Mapped[str] = mapped_column(String(64), ForeignKey("cloud_resources.id"), nullable=False)
     

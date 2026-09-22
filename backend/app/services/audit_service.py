@@ -1,4 +1,4 @@
-"""CloudGuard AI — Audit Service: Tamper-Evident Hash-Chained Audit Logging"""
+﻿"""CloudGuard AI â€” Audit Service: Tamper-Evident Hash-Chained Audit Logging"""
 import json
 import uuid
 import hashlib

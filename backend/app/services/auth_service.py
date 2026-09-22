@@ -1,4 +1,6 @@
-"""CloudGuard AI — Auth Service: Argon2id Password Hashing & JWT Management
+﻿from sqlalchemy.orm import Session
+from app.database import get_db
+"""CloudGuard AI â€” Auth Service: Argon2id Password Hashing & JWT Management
 
 Strict adherence:
 - Passwords are NEVER encrypted; they are irreversibly hashed using Argon2id
@@ -124,6 +126,23 @@ def get_current_user_token(credentials: HTTPAuthorizationCredentials = Security(
     return decode_token(credentials.credentials, is_refresh=False)
 
 
+def get_current_user(
+    token_data: Dict[str, Any] = Depends(get_current_user_token),
+    db: Session = Depends(get_db)
+):
+    """FastAPI dependency resolving authenticated User model from verified JWT subject."""
+    from app.models.user import User
+    user_id = token_data.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token subject")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User account not found")
+    if not user.is_active or user.is_locked:
+        raise HTTPException(status_code=403, detail="Account is disabled or locked")
+    return user
+
+
 def require_role(allowed_roles: list[UserRole]):
     """RBAC authorization guard verifying user role claim."""
     def role_checker(token_data: Dict[str, Any] = Depends(get_current_user_token)):
@@ -199,4 +218,5 @@ def validate_password_complexity(password: str) -> None:
         raise HTTPException(status_code=400, detail="Password must contain at least one number (0-9).")
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_]", password):
         raise HTTPException(status_code=400, detail="Password must contain at least one special character (!@#$%^&*...).")
+
 

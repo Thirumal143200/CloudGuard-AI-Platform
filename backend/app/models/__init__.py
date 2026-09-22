@@ -1,4 +1,4 @@
-"""CloudGuard AI — Database Models Package"""
+﻿"""CloudGuard AI â€” Database Models Package"""
 from app.database import Base
 from app.models.user import User, UserRole
 from app.models.cloud import CloudAccount, DataSource, IngestionJob, CloudProviderEnum, DataSourceTypeEnum, IngestionStatusEnum

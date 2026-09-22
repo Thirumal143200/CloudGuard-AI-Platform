@@ -1,5 +1,6 @@
-"""CloudGuard AI — ORM Models: Cloud Accounts, Data Sources, Ingestion"""
+﻿"""CloudGuard AI - ORM Models: Cloud Accounts, Data Sources, Ingestion"""
 import enum
+from typing import Optional
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -60,26 +61,28 @@ class CloudAccount(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "cloud_accounts"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     provider: Mapped[CloudProvider] = mapped_column(SAEnum(CloudProvider), nullable=False)
     account_id: Mapped[str] = mapped_column(String(255), nullable=False)
     environment: Mapped[str] = mapped_column(String(64), default="production", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    credentials_encrypted: Mapped[str] = mapped_column(Text, nullable=True)
-    last_sync_at: Mapped[str] = mapped_column(DateTime, nullable=True)
+    credentials_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_sync_at: Mapped[Optional[DateTime]] = mapped_column(DateTime, nullable=True)
 
 
 class DataSource(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "data_sources"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     source_type: Mapped[SourceType] = mapped_column(SAEnum(SourceType), nullable=False)
-    cloud_account_id: Mapped[str] = mapped_column(
+    cloud_account_id: Mapped[Optional[str]] = mapped_column(
         String(64), ForeignKey("cloud_accounts.id"), nullable=True
     )
     status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
-    last_ingested_at: Mapped[str] = mapped_column(DateTime, nullable=True)
+    last_ingested_at: Mapped[Optional[DateTime]] = mapped_column(DateTime, nullable=True)
     total_records_ingested: Mapped[int] = mapped_column(Integer, default=0)
 
 
@@ -87,6 +90,7 @@ class IngestionJob(Base, TimestampMixin):
     __tablename__ = "ingestion_jobs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     data_source_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("data_sources.id"), nullable=False
     )
@@ -96,4 +100,4 @@ class IngestionJob(Base, TimestampMixin):
     )
     records_processed: Mapped[int] = mapped_column(Integer, default=0)
     records_failed: Mapped[int] = mapped_column(Integer, default=0)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

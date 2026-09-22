@@ -1,4 +1,4 @@
-"""CloudGuard AI — ORM Models: AI Explanations, Root Cause Analysis, and Gemini Audit Logs"""
+﻿"""CloudGuard AI - ORM Models: AI Explanations, Root Cause Analysis, and Gemini Audit Logs"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float
 from sqlalchemy import Enum as SAEnum, Index
@@ -21,15 +21,16 @@ class GeminiAuditLog(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "gemini_audit_logs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
     category: Mapped[PromptCategoryEnum] = mapped_column(SAEnum(PromptCategoryEnum), nullable=False, index=True)
     model_name: Mapped[str] = mapped_column(String(64), default="gemini-2.5-flash", nullable=False)
     
     target_entity_type: Mapped[str] = mapped_column(String(64), nullable=False) # 'FINDING', 'INCIDENT'
     target_entity_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     
-    system_prompt: Mapped[Text] = mapped_column(Text, nullable=False)
-    user_prompt: Mapped[Text] = mapped_column(Text, nullable=False)
-    raw_response: Mapped[Text] = mapped_column(Text, nullable=False)
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    user_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_response: Mapped[str] = mapped_column(Text, nullable=False)
     parsed_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)

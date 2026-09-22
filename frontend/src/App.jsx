@@ -44,30 +44,21 @@ function AppContent() {
       console.warn('Could not fetch system status:', e);
     }
 
-    // 2. Check Auth
+    // 2. Check Auth — zero auto-login or prefilled accounts
     const token = getAuthToken();
     if (token) {
       try {
         const profile = await getMe();
         setUser(profile);
+        loadDashboardMetrics();
       } catch (e) {
         removeAuthToken();
         setUser(null);
       }
     } else {
-      // Auto-login for local development / evaluation if token not set
-      try {
-        const loginRes = await login('admin@cloudguard.ai', 'Admin@CloudGuard2026!');
-        if (loginRes.access_token) {
-          setAuthToken(loginRes.access_token);
-          setUser(loginRes.user);
-        }
-      } catch (err) {
-        console.warn('Auto-login notice:', err);
-      }
+      setUser(null);
     }
     setAuthChecked(true);
-    loadDashboardMetrics();
   }
 
   async function loadDashboardMetrics() {
@@ -82,6 +73,7 @@ function AppContent() {
   function handleLogout() {
     removeAuthToken();
     setUser(null);
+    setMetrics(null);
     showToast('Signed out of CloudGuard AI session', 'info');
   }
 
@@ -172,3 +164,4 @@ export default function App() {
     </ToastProvider>
   );
 }
+
