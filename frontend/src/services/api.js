@@ -99,4 +99,46 @@ export const api = {
 
   // Seed & Admin
   seedDemoData: () => apiRequest('/system/seed-demo-data', { method: 'POST' }),
+
+  // Data Sources & Ingestion
+  getDataSources: () => apiRequest('/cloud/data-sources'),
+  uploadEvidence: (data) => apiRequest('/cloud/upload-evidence', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  triggerRescan: () => apiRequest('/cloud/rescan', { method: 'POST' }),
+  clearAllData: () => apiRequest('/cloud/clear-data', { method: 'DELETE' }),
 };
+
+// Export individual named methods for modern modular imports
+export const {
+  login,
+  register,
+  getMe,
+  getSystemStatus,
+  getHealth,
+  getDashboardMetrics,
+  getAuditLogs,
+  verifyAuditChain,
+  getComplianceFrameworks,
+  getAccounts,
+  getResources,
+  getResourceDetail,
+  getFindings,
+  getFindingDetail,
+  getRules,
+  getIncidents,
+  getIncidentDetail,
+  getIncidentTimeline,
+  getRemediations,
+  runDryRun,
+  executeRemediation,
+  analyzeFindingAI,
+  seedDemoData,
+  getDataSources,
+  uploadEvidence,
+  triggerRescan,
+  clearAllData,
+} = api;
+
+export default api;

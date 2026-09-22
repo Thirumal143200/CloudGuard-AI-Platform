@@ -2,15 +2,29 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
-import InventoryPage from './pages/InventoryPage';
+import AssetsPage from './pages/AssetsPage';
 import FindingsPage from './pages/FindingsPage';
 import IncidentsPage from './pages/IncidentsPage';
 import RemediationsPage from './pages/RemediationsPage';
-import AuditCompliancePage from './pages/AuditCompliancePage';
+import CompliancePage from './pages/CompliancePage';
+import AuditLogPage from './pages/AuditLogPage';
+import DataSourcesPage from './pages/DataSourcesPage';
+import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
-import { api, getAuthToken, removeAuthToken } from './services/api';
+import { ToastProvider, useToast } from './components/Toast';
+import {
+  getAuthToken,
+  setAuthToken,
+  removeAuthToken,
+  getSystemStatus,
+  getMe,
+  login,
+  getDashboardMetrics,
+  seedDemoData,
+} from './services/api';
 
-export default function App() {
+function AppContent() {
+  const { showToast } = useToast();
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -24,7 +38,7 @@ export default function App() {
   async function checkAuthAndLoad() {
     // 1. Fetch system status (non-sensitive)
     try {
-      const statusData = await api.getSystemStatus();
+      const statusData = await getSystemStatus();
       setSystemStatus(statusData);
     } catch (e) {
       console.warn('Could not fetch system status:', e);
@@ -34,18 +48,18 @@ export default function App() {
     const token = getAuthToken();
     if (token) {
       try {
-        const profile = await api.getMe();
+        const profile = await getMe();
         setUser(profile);
       } catch (e) {
         removeAuthToken();
         setUser(null);
       }
     } else {
-      // Auto-login for local development/demo experience if token not set
+      // Auto-login for local development / evaluation if token not set
       try {
-        const loginRes = await api.login('admin@cloudguard.ai', 'Admin@CloudGuard2026!');
+        const loginRes = await login('admin@cloudguard.ai', 'Admin@CloudGuard2026!');
         if (loginRes.access_token) {
-          localStorage.setItem('cloudguard_token', loginRes.access_token);
+          setAuthToken(loginRes.access_token);
           setUser(loginRes.user);
         }
       } catch (err) {
@@ -58,7 +72,7 @@ export default function App() {
 
   async function loadDashboardMetrics() {
     try {
-      const data = await api.getDashboardMetrics();
+      const data = await getDashboardMetrics();
       setMetrics(data);
     } catch (e) {
       console.error('Failed to load metrics:', e);
@@ -68,52 +82,58 @@ export default function App() {
   function handleLogout() {
     removeAuthToken();
     setUser(null);
+    showToast('Signed out of CloudGuard AI session', 'info');
   }
 
   async function handleSeedDemo() {
     try {
-      await api.seedDemoData();
-      alert('Demo multi-cloud environment successfully seeded and re-scanned!');
+      await seedDemoData();
+      showToast('Multi-cloud demo environment seeded & policy evaluation completed!', 'success');
       await loadDashboardMetrics();
       setActiveTab('dashboard');
     } catch (err) {
-      alert(`Error seeding demo: ${err.message}`);
+      showToast(`Error seeding demo: ${err.message}`, 'error');
     }
   }
 
   if (!authChecked) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)' }}>
-        <span className="pulse-indicator"></span>
-        <span style={{ marginLeft: '12px', color: 'var(--cyan-glow)', fontFamily: 'var(--font-mono)' }}>Initializing CloudGuard AI Platform...</span>
+        <div style={{ textAlign: 'center' }}>
+          <span className="status-dot pulsing" style={{ width: '14px', height: '14px', backgroundColor: '#3b82f6', margin: '0 auto 12px' }}></span>
+          <div style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+            Initializing CloudGuard SOC Platform...
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!user) {
-    return <LoginPage onLoginSuccess={(u) => { setUser(u); loadDashboardMetrics(); }} />;
+    return <LoginPage onLoginSuccess={(u) => { setUser(u); loadDashboardMetrics(); showToast('Welcome to CloudGuard AI', 'success'); }} />;
   }
 
   return (
     <div className="app-container">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} metrics={metrics} />
       <div className="main-content">
-        <Navbar 
-          user={user} 
-          onLogout={handleLogout} 
+        <Navbar
+          user={user}
+          onLogout={handleLogout}
           onSeedDemo={handleSeedDemo}
           systemStatus={systemStatus}
+          activeTab={activeTab}
         />
-        <main className="page-body">
+        <main style={{ flex: 1, minHeight: 0 }}>
           {activeTab === 'dashboard' && (
-            <DashboardPage 
-              metrics={metrics} 
-              onNavigate={setActiveTab} 
+            <DashboardPage
+              metrics={metrics}
+              onNavigate={setActiveTab}
               onInvestigateFinding={() => setActiveTab('findings')}
               systemStatus={systemStatus}
             />
           )}
-          {activeTab === 'inventory' && <InventoryPage />}
+          {(activeTab === 'assets' || activeTab === 'inventory') && <AssetsPage />}
           {activeTab === 'findings' && (
             <FindingsPage onNavigateToRemediation={() => setActiveTab('remediations')} />
           )}
@@ -123,10 +143,22 @@ export default function App() {
           {activeTab === 'remediations' && (
             <RemediationsPage onRefreshDashboard={loadDashboardMetrics} />
           )}
-          {activeTab === 'audit' && <AuditCompliancePage />}
-          {activeTab === 'compliance' && <AuditCompliancePage />}
+          {activeTab === 'compliance' && <CompliancePage />}
+          {activeTab === 'audit' && <AuditLogPage />}
+          {activeTab === 'datasources' && (
+            <DataSourcesPage onDataModified={loadDashboardMetrics} />
+          )}
+          {activeTab === 'settings' && <SettingsPage />}
         </main>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
