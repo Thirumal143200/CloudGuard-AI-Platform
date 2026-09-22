@@ -49,13 +49,13 @@ npm run dev
 
 ---
 
-## 🔑 Default Demo Credentials
+## 🔐 Multi-Tenant Access & Self-Service Registration
 
-| Role | Email | Password |
-|---|---|---|
-| **Lead Security Architect / Admin** | `admin@cloudguard.ai` | `Admin@CloudGuard2026!` |
+CloudGuard AI operates with zero default or hardcoded credentials. Every user creates their own account via the secure signup flow:
 
-*(A 1-click "Fill Demo Admin Credentials" button is also provided directly on the login screen).*
+1. Click **Create Analyst Account** on the application portal.
+2. Provide a valid business email and a strong password meeting NIST SP 800-63B standards (8+ chars, uppercase, lowercase, numbers, symbols).
+3. Log in to access your tenant-isolated dashboard, assets, evidence findings, and remediation playbooks.
 
 ---
 

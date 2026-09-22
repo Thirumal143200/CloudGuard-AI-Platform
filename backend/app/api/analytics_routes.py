@@ -1,10 +1,10 @@
-﻿"""CloudGuard AI - API Routes: Dashboard Metrics, Audit Logs, and Compliance Summaries"""
+"""CloudGuard AI - API Routes: Dashboard Metrics, Audit Logs, and Compliance Summaries"""
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.finding import Finding, SeverityEnum, FindingStatusEnum
 from app.models.resource import CloudResource
@@ -25,31 +25,23 @@ def get_dashboard_metrics(
     db: Session = Depends(get_db)
 ):
     """Retrieve high-level consolidated security metrics, risk posture scoped to the authenticated user."""
-    if current_user.role == UserRole.ADMIN:
-        total_res = db.query(CloudResource).count()
-        open_findings = db.query(Finding).filter(Finding.status == FindingStatusEnum.OPEN).all()
-        total_plans = db.query(RemediationPlan).count()
-        completed_plans = db.query(RemediationPlan).filter(RemediationPlan.status == RemediationPlanStatus.COMPLETED).count()
-        open_incidents = db.query(Incident).filter(Incident.status != IncidentStatusEnum.CLOSED).count()
-        top_res_query = db.query(CloudResource).order_by(desc(CloudResource.risk_score)).limit(5).all()
-    else:
-        total_res = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).count()
-        open_findings = db.query(Finding).filter(
-            Finding.user_id == current_user.id,
-            Finding.status == FindingStatusEnum.OPEN
-        ).all()
-        total_plans = db.query(RemediationPlan).filter(RemediationPlan.user_id == current_user.id).count()
-        completed_plans = db.query(RemediationPlan).filter(
-            RemediationPlan.user_id == current_user.id,
-            RemediationPlan.status == RemediationPlanStatus.COMPLETED
-        ).count()
-        open_incidents = db.query(Incident).filter(
-            Incident.user_id == current_user.id,
-            Incident.status != IncidentStatusEnum.CLOSED
-        ).count()
-        top_res_query = db.query(CloudResource).filter(
-            CloudResource.user_id == current_user.id
-        ).order_by(desc(CloudResource.risk_score)).limit(5).all()
+    total_res = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).count()
+    open_findings = db.query(Finding).filter(
+        Finding.user_id == current_user.id,
+        Finding.status == FindingStatusEnum.OPEN
+    ).all()
+    total_plans = db.query(RemediationPlan).filter(RemediationPlan.user_id == current_user.id).count()
+    completed_plans = db.query(RemediationPlan).filter(
+        RemediationPlan.user_id == current_user.id,
+        RemediationPlan.status == RemediationPlanStatus.COMPLETED
+    ).count()
+    open_incidents = db.query(Incident).filter(
+        Incident.user_id == current_user.id,
+        Incident.status != IncidentStatusEnum.CLOSED
+    ).count()
+    top_res_query = db.query(CloudResource).filter(
+        CloudResource.user_id == current_user.id
+    ).order_by(desc(CloudResource.risk_score)).limit(5).all()
 
     crit = sum(1 for f in open_findings if f.severity == SeverityEnum.CRITICAL)
     high = sum(1 for f in open_findings if f.severity == SeverityEnum.HIGH)
@@ -86,10 +78,29 @@ def get_audit_trail(
     db: Session = Depends(get_db)
 ):
     """Retrieve cryptographically chained tamper-evident audit logs scoped to user."""
-    query = db.query(AuditLog)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(AuditLog.actor_id == current_user.id)
-    return query.order_by(desc(AuditLog.sequence_number)).limit(50).all()
+    return (
+        db.query(AuditLog)
+        .filter(AuditLog.actor_id == current_user.id)
+        .order_by(desc(AuditLog.sequence_number))
+        .limit(50)
+        .all()
+    )
+
+
+@router.get("/audit/logs/{log_id}")
+def get_audit_log_entry(
+    log_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieve a single audit record with strict IDOR protection."""
+    log = db.query(AuditLog).filter(
+        AuditLog.id == log_id,
+        AuditLog.actor_id == current_user.id
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Audit log entry not found")
+    return log
 
 
 @router.get("/audit/verify")

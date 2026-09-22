@@ -1,4 +1,4 @@
-﻿"""CloudGuard AI - ORM Models: Cloud Resources & Snapshots"""
+"""CloudGuard AI - ORM Models: Cloud Resources & Snapshots"""
 from typing import Optional
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float, Index
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,7 +14,7 @@ class CloudResource(Base, TimestampMixin, SimulatedMixin):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False, index=True)
     cloud_account_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("cloud_accounts.id"), nullable=True)
     native_id: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

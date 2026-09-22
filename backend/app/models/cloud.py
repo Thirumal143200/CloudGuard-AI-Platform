@@ -1,4 +1,4 @@
-﻿"""CloudGuard AI - ORM Models: Cloud Accounts, Data Sources, Ingestion"""
+"""CloudGuard AI - ORM Models: Cloud Accounts, Data Sources, Ingestion"""
 import enum
 from typing import Optional
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON
@@ -61,7 +61,7 @@ class CloudAccount(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "cloud_accounts"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     provider: Mapped[CloudProvider] = mapped_column(SAEnum(CloudProvider), nullable=False)
     account_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -75,7 +75,7 @@ class DataSource(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "data_sources"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     source_type: Mapped[SourceType] = mapped_column(SAEnum(SourceType), nullable=False)
     cloud_account_id: Mapped[Optional[str]] = mapped_column(
@@ -90,7 +90,7 @@ class IngestionJob(Base, TimestampMixin):
     __tablename__ = "ingestion_jobs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_uuid)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False, index=True)
     data_source_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("data_sources.id"), nullable=False
     )

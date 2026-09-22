@@ -1,9 +1,11 @@
-﻿"""CloudGuard AI â€” Ingestion Service: Multi-Cloud Telemetry & Asset Ingestion + Demo Seed Data Generator"""
+"""CloudGuard AI â€” Ingestion Service: Multi-Cloud Telemetry & Asset Ingestion + Demo Seed Data Generator"""
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
+from app.models.user import User, UserRole
+from app.services.auth_service import hash_password
 from app.models.cloud import CloudAccount, DataSource, IngestionJob, CloudProviderEnum, DataSourceTypeEnum, IngestionStatusEnum
 from app.models.resource import CloudResource
 from app.models.finding import Finding, SeverityEnum, FindingStatusEnum, RuleCategoryEnum, SecurityRule
@@ -24,6 +26,22 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
     if existing_acc:
         return {"status": "ALREADY_SEEDED", "account_id": existing_acc.id}
 
+    # Ensure quarantined legacy tenant exists for demo seeds so they never collide with real users
+    legacy_user_id = "usr-quarantined-legacy"
+    legacy_user = db.query(User).filter(User.id == legacy_user_id).first()
+    if not legacy_user:
+        legacy_user = User(
+            id=legacy_user_id,
+            email="quarantined-demo@cloudguard.internal",
+            full_name="Quarantined Demo Tenant",
+            hashed_password=hash_password("QuarantinedLegacy!2026"),
+            role=UserRole.VIEWER,
+            is_active=False,
+            is_locked=True
+        )
+        db.add(legacy_user)
+        db.commit()
+
     # 2. Create Security Rules Catalog in DB
     for r in RULES_CATALOG:
         rule_db = SecurityRule(
@@ -42,6 +60,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
     # 3. Create Cloud Accounts (AWS, Azure, GCP)
     aws_acc = CloudAccount(
         id="acc-aws-prod",
+        user_id=legacy_user_id,
         name="AWS Enterprise Production",
         provider=CloudProviderEnum.AWS,
         account_id="123456789012",
@@ -52,6 +71,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
     )
     azure_acc = CloudAccount(
         id="acc-azure-corp",
+        user_id=legacy_user_id,
         name="Azure Corp Core",
         provider=CloudProviderEnum.AZURE,
         account_id="sub-azure-987654",
@@ -163,6 +183,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
     for r_data in resources_data:
         res = CloudResource(
             id=r_data["id"],
+            user_id=legacy_user_id,
             cloud_account_id=r_data["account_id"],
             native_id=r_data["native_id"],
             name=r_data["name"],
@@ -190,6 +211,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
             f_id = f"fnd-{uuid.uuid4().hex[:8]}"
             finding_obj = Finding(
                 id=f_id,
+                user_id=legacy_user_id,
                 rule_id=f_dict["rule_id"],
                 resource_id=res.id,
                 cloud_account_id=res.cloud_account_id,
@@ -211,6 +233,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
             rem_pkg = generate_remediation_package(finding_obj, res)
             plan_obj = RemediationPlan(
                 id=f"rem-{uuid.uuid4().hex[:8]}",
+                user_id=legacy_user_id,
                 title=rem_pkg["title"],
                 description=rem_pkg["description"],
                 finding_id=finding_obj.id,
@@ -228,6 +251,7 @@ def seed_demo_cloud_environment(db: Session) -> Dict[str, Any]:
     inc_id = "inc-2026-p1-001"
     inc = Incident(
         id=inc_id,
+        user_id=legacy_user_id,
         title="Critical Data Exposure & Lateral Privilege Escalation Chain",
         description="Correlated detection: S3 Public Bucket contains unencrypted PII with active open SSH ingress and wildcard admin IAM policies.",
         cloud_account_id=aws_acc.id,

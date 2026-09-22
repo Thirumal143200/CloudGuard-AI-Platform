@@ -1,4 +1,4 @@
-﻿"""CloudGuard AI - ORM Models: Incidents, Timelines, and Incident Evidence"""
+"""CloudGuard AI - ORM Models: Incidents, Timelines, and Incident Evidence"""
 import enum
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, JSON, Float
 from sqlalchemy import Enum as SAEnum, Index
@@ -28,7 +28,7 @@ class Incident(Base, TimestampMixin, SimulatedMixin):
     __tablename__ = "incidents"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     cloud_account_id: Mapped[Optional[str]] = mapped_column(String(64), ForeignKey("cloud_accounts.id"), nullable=True, index=True)

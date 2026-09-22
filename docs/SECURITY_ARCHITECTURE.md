@@ -71,7 +71,7 @@ Every administrative and automated remediation action is permanently recorded in
 [Genesis Block: Hash 0000...0000]
          │
          ▼
-[Record #1: SHA-256(GenesisHash | Seq=1 | USER_LOGIN | admin@cloudguard.ai | ...)]
+[Record #1: SHA-256(GenesisHash | Seq=1 | USER_LOGIN | analyst@customer.corp | ...)]
          │
          ▼
 [Record #2: SHA-256(Record#1Hash | Seq=2 | REMEDIATION_EXECUTED | res-s3-finance | ...)]

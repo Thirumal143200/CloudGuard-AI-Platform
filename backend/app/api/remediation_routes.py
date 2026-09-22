@@ -1,9 +1,9 @@
-﻿"""CloudGuard AI - API Routes: Remediation Plans, Dry Runs, and Automated Execution"""
+"""CloudGuard AI - API Routes: Remediation Plans, Dry Runs, and Automated Execution"""
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.remediation import RemediationPlan
 from app.models.resource import CloudResource
@@ -19,10 +19,28 @@ def list_remediation_plans(
     db: Session = Depends(get_db)
 ):
     """List all proposed, approved, and executed remediation actions scoped to authenticated user."""
-    query = db.query(RemediationPlan)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(RemediationPlan.user_id == current_user.id)
-    return query.order_by(RemediationPlan.created_at.desc()).all()
+    return (
+        db.query(RemediationPlan)
+        .filter(RemediationPlan.user_id == current_user.id)
+        .order_by(RemediationPlan.created_at.desc())
+        .all()
+    )
+
+
+@router.get("/{plan_id}", response_model=RemediationPlanResponse)
+def get_remediation_plan(
+    plan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieve detail of a remediation plan with IDOR protection."""
+    plan = db.query(RemediationPlan).filter(
+        RemediationPlan.id == plan_id,
+        RemediationPlan.user_id == current_user.id
+    ).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
 
 
 @router.post("/{plan_id}/dry-run")
@@ -32,18 +50,16 @@ def run_dry_run(
     db: Session = Depends(get_db)
 ):
     """Simulate execution of remediation plan with IDOR verification."""
-    query = db.query(RemediationPlan).filter(RemediationPlan.id == plan_id)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(RemediationPlan.user_id == current_user.id)
-    plan = query.first()
+    plan = db.query(RemediationPlan).filter(
+        RemediationPlan.id == plan_id,
+        RemediationPlan.user_id == current_user.id
+    ).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
         
-    res_query = db.query(CloudResource)
+    res_query = db.query(CloudResource).filter(CloudResource.user_id == current_user.id)
     if plan.cloud_account_id:
         res_query = res_query.filter(CloudResource.cloud_account_id == plan.cloud_account_id)
-    if current_user.role != UserRole.ADMIN:
-        res_query = res_query.filter(CloudResource.user_id == current_user.id)
     resource = res_query.first()
     if not resource:
         resource = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).first()
@@ -65,10 +81,10 @@ def trigger_execution(
     db: Session = Depends(get_db)
 ):
     """Execute remediation against target cloud resource with IDOR verification."""
-    query = db.query(RemediationPlan).filter(RemediationPlan.id == plan_id)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(RemediationPlan.user_id == current_user.id)
-    plan = query.first()
+    plan = db.query(RemediationPlan).filter(
+        RemediationPlan.id == plan_id,
+        RemediationPlan.user_id == current_user.id
+    ).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
 

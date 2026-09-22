@@ -1,4 +1,4 @@
-﻿"""CloudGuard AI - API Routes: Cloud Accounts, Discovered Assets & Ingestion Hub"""
+"""CloudGuard AI - API Routes: Cloud Accounts, Discovered Assets & Ingestion Hub"""
 import json
 import uuid
 import hashlib
@@ -38,10 +38,7 @@ def list_accounts(
     db: Session = Depends(get_db)
 ):
     """List connected cloud accounts scoped to the authenticated user."""
-    query = db.query(CloudAccount)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(CloudAccount.user_id == current_user.id)
-    return query.all()
+    return db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).all()
 
 
 @router.post("/accounts", response_model=CloudAccountResponse)
@@ -87,29 +84,20 @@ def list_data_sources(
     List all data ingestion channels with honest configuration status,
     required permissions, collected resource types, and supported formats.
     """
-    if current_user.role == UserRole.ADMIN:
-        accounts = db.query(CloudAccount).all()
-        resource_count = db.query(CloudResource).count()
-        uploaded_count = db.query(CloudResource).filter(CloudResource.is_simulated == False).count()
-    else:
-        accounts = db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).all()
-        resource_count = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).count()
-        uploaded_count = db.query(CloudResource).filter(
-            CloudResource.user_id == current_user.id,
-            CloudResource.is_simulated == False
-        ).count()
+    accounts = db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).all()
+    resource_count = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).count()
+    uploaded_count = db.query(CloudResource).filter(
+        CloudResource.user_id == current_user.id,
+        CloudResource.is_simulated == False
+    ).count()
 
     aws_configured = bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_ACCESS_KEY_ID.strip())
     azure_configured = bool(settings.AZURE_CLIENT_ID and settings.AZURE_CLIENT_ID.strip())
     gcp_configured = bool(settings.GCP_PROJECT_ID and settings.GCP_PROJECT_ID.strip())
 
-    aws_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AWS)
-    az_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AZURE)
-    gcp_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.GCP)
-    if current_user.role != UserRole.ADMIN:
-        aws_res_query = aws_res_query.filter(CloudResource.user_id == current_user.id)
-        az_res_query = az_res_query.filter(CloudResource.user_id == current_user.id)
-        gcp_res_query = gcp_res_query.filter(CloudResource.user_id == current_user.id)
+    aws_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AWS, CloudResource.user_id == current_user.id)
+    az_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.AZURE, CloudResource.user_id == current_user.id)
+    gcp_res_query = db.query(CloudResource).filter(CloudResource.provider == CloudProviderEnum.GCP, CloudResource.user_id == current_user.id)
 
     sources = [
         {
@@ -439,10 +427,13 @@ def list_ingestion_jobs(
     db: Session = Depends(get_db)
 ):
     """List recent ingestion jobs belonging to the authenticated user."""
-    query = db.query(IngestionJob)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(IngestionJob.user_id == current_user.id)
-    jobs = query.order_by(IngestionJob.created_at.desc()).limit(20).all()
+    jobs = (
+        db.query(IngestionJob)
+        .filter(IngestionJob.user_id == current_user.id)
+        .order_by(IngestionJob.created_at.desc())
+        .limit(20)
+        .all()
+    )
     return [
         {
             "id": j.id,
@@ -455,6 +446,30 @@ def list_ingestion_jobs(
         }
         for j in jobs
     ]
+
+
+@router.get("/ingestion-jobs/{job_id}")
+def get_ingestion_job(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieve detail of an ingestion job with IDOR protection."""
+    job = db.query(IngestionJob).filter(
+        IngestionJob.id == job_id,
+        IngestionJob.user_id == current_user.id
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Ingestion job not found")
+    return {
+        "id": job.id,
+        "job_type": job.job_type,
+        "status": str(job.status.value) if hasattr(job.status, "value") else str(job.status),
+        "records_processed": job.records_processed,
+        "records_failed": job.records_failed,
+        "error_message": job.error_message,
+        "created_at": job.created_at.isoformat() if hasattr(job.created_at, "isoformat") else str(job.created_at)
+    }
 
 
 @router.post("/upload-evidence")
@@ -607,9 +622,7 @@ def list_resources(
     db: Session = Depends(get_db)
 ):
     """List discovered cloud resources scoped to the authenticated user."""
-    query = db.query(CloudResource)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(CloudResource.user_id == current_user.id)
+    query = db.query(CloudResource).filter(CloudResource.user_id == current_user.id)
     if provider and provider != "ALL":
         query = query.filter(CloudResource.provider == provider.upper())
     if resource_type:
@@ -626,13 +639,64 @@ def get_resource(
     db: Session = Depends(get_db)
 ):
     """Retrieve full configuration snapshot of a specific cloud resource with IDOR protection."""
-    query = db.query(CloudResource).filter(CloudResource.id == resource_id)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(CloudResource.user_id == current_user.id)
-    res = query.first()
+    res = db.query(CloudResource).filter(
+        CloudResource.id == resource_id,
+        CloudResource.user_id == current_user.id
+    ).first()
     if not res:
         raise HTTPException(status_code=404, detail="Resource not found")
     return res
+
+
+@router.patch("/resources/{resource_id}", response_model=CloudResourceResponse)
+def update_resource(
+    resource_id: str,
+    update_payload: Dict[str, Any] = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a cloud resource configuration or metadata with strict IDOR verification."""
+    res = db.query(CloudResource).filter(
+        CloudResource.id == resource_id,
+        CloudResource.user_id == current_user.id
+    ).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    if "name" in update_payload:
+        res.name = update_payload["name"]
+    if "tags" in update_payload and isinstance(update_payload["tags"], dict):
+        res.tags = update_payload["tags"]
+    if "configuration" in update_payload and isinstance(update_payload["configuration"], dict):
+        res.configuration = update_payload["configuration"]
+
+    db.commit()
+    db.refresh(res)
+    return res
+
+
+@router.delete("/resources/{resource_id}")
+def delete_resource(
+    resource_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a cloud resource with strict IDOR verification."""
+    res = db.query(CloudResource).filter(
+        CloudResource.id == resource_id,
+        CloudResource.user_id == current_user.id
+    ).first()
+    if not res:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    finding_ids = [f.id for f in db.query(Finding.id).filter(Finding.resource_id == resource_id).all()]
+    if finding_ids:
+        db.query(FindingEvidence).filter(FindingEvidence.finding_id.in_(finding_ids)).delete(synchronize_session=False)
+        db.query(Finding).filter(Finding.id.in_(finding_ids)).delete(synchronize_session=False)
+
+    db.delete(res)
+    db.commit()
+    return {"status": "DELETED", "id": resource_id}
 
 
 @router.post("/rescan")
@@ -641,10 +705,7 @@ def trigger_rescan(
     db: Session = Depends(get_db)
 ):
     """Re-evaluate all discovered resources against active rules catalog for the user."""
-    query = db.query(CloudResource)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(CloudResource.user_id == current_user.id)
-    resources = query.all()
+    resources = db.query(CloudResource).filter(CloudResource.user_id == current_user.id).all()
     total_evaluated = 0
     new_findings_count = 0
 
@@ -726,27 +787,19 @@ def clear_all_data(
     db: Session = Depends(get_db)
 ):
     """Clear resources, findings, incidents and jobs belonging to the authenticated user."""
-    if current_user.role == UserRole.ADMIN:
-        db.query(FindingEvidence).delete()
-        db.query(Finding).delete()
-        db.query(IncidentTimeline).delete()
-        db.query(Incident).delete()
-        db.query(RemediationPlan).delete()
-        db.query(CloudResource).delete()
-        db.query(CloudAccount).delete()
-        db.query(IngestionJob).delete()
-        db.commit()
-    else:
-        user_finding_ids = [f.id for f in db.query(Finding.id).filter(Finding.user_id == current_user.id).all()]
-        if user_finding_ids:
-            db.query(FindingEvidence).filter(FindingEvidence.finding_id.in_(user_finding_ids)).delete(synchronize_session=False)
-        db.query(Finding).filter(Finding.user_id == current_user.id).delete()
-        db.query(Incident).filter(Incident.user_id == current_user.id).delete()
-        db.query(RemediationPlan).filter(RemediationPlan.user_id == current_user.id).delete()
-        db.query(CloudResource).filter(CloudResource.user_id == current_user.id).delete()
-        db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).delete()
-        db.query(IngestionJob).filter(IngestionJob.user_id == current_user.id).delete()
-        db.commit()
+    user_finding_ids = [f.id for f in db.query(Finding.id).filter(Finding.user_id == current_user.id).all()]
+    if user_finding_ids:
+        db.query(FindingEvidence).filter(FindingEvidence.finding_id.in_(user_finding_ids)).delete(synchronize_session=False)
+    db.query(Finding).filter(Finding.user_id == current_user.id).delete()
+    user_incident_ids = [i.id for i in db.query(Incident.id).filter(Incident.user_id == current_user.id).all()]
+    if user_incident_ids:
+        db.query(IncidentTimeline).filter(IncidentTimeline.incident_id.in_(user_incident_ids)).delete(synchronize_session=False)
+    db.query(Incident).filter(Incident.user_id == current_user.id).delete()
+    db.query(RemediationPlan).filter(RemediationPlan.user_id == current_user.id).delete()
+    db.query(CloudResource).filter(CloudResource.user_id == current_user.id).delete()
+    db.query(CloudAccount).filter(CloudAccount.user_id == current_user.id).delete()
+    db.query(IngestionJob).filter(IngestionJob.user_id == current_user.id).delete()
+    db.commit()
 
     log_action(
         db,

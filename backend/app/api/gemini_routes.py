@@ -1,8 +1,8 @@
-﻿"""CloudGuard AI - API Routes: Gemini AI Deep Threat Investigation & Assistant"""
+"""CloudGuard AI - API Routes: Gemini AI Deep Threat Investigation & Assistant"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.services.auth_service import get_current_user
 from app.models.finding import Finding
 from app.models.resource import CloudResource
@@ -22,17 +22,17 @@ def analyze_finding_ai(
     if not req.target_id:
         raise HTTPException(status_code=400, detail="Finding target_id is required")
 
-    query = db.query(Finding).filter(Finding.id == req.target_id)
-    if current_user.role != UserRole.ADMIN:
-        query = query.filter(Finding.user_id == current_user.id)
-    finding = query.first()
+    finding = db.query(Finding).filter(
+        Finding.id == req.target_id,
+        Finding.user_id == current_user.id
+    ).first()
     if not finding:
         raise HTTPException(status_code=404, detail="Finding not found")
 
-    res_query = db.query(CloudResource).filter(CloudResource.id == finding.resource_id)
-    if current_user.role != UserRole.ADMIN:
-        res_query = res_query.filter(CloudResource.user_id == current_user.id)
-    resource = res_query.first()
+    resource = db.query(CloudResource).filter(
+        CloudResource.id == finding.resource_id,
+        CloudResource.user_id == current_user.id
+    ).first()
     res_config = resource.configuration if resource else {}
 
     analysis = gemini_service.analyze_finding(
