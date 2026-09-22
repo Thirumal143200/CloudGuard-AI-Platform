@@ -1,5 +1,5 @@
 -- =============================================================================
--- CloudGuard AI Platform — Supabase Row Level Security (RLS) Policy Guide
+-- CloudGuard AI Platform â€” Supabase Row Level Security (RLS) Policy Guide
 -- Database: PostgreSQL (Supabase)
 -- Author: CloudGuard Security Architecture Team
 -- =============================================================================
@@ -123,4 +123,4 @@ CREATE POLICY "gemini_audit_logs_tenant_isolation" ON gemini_audit_logs
 -- =============================================================================
 -- The FastAPI backend connects using the standard Postgres connection string,
 -- which possesses the BYPASSRLS attribute in Supabase, ensuring backend services
--- maintain high-throughput connection pooling without latency regressions.
+-- maintain high-throughput connection pooling without latency regressions.
